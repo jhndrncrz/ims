@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ReportCategory {
+  INFRASTRUCTURE
+  DISASTER
+  ADMIN
+  OTHER
+}
+
+enum ReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReportStatus {
+  OPEN
+  ACKNOWLEDGED
+  CLOSED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ChannelType {
+  SMS
+  MESSENGER
+  EMAIL
+  WHATSAPP
+}
+
+model Report {
+  id             String         @id @default(cuid())
+  phoneNumber    String
+  message        String
+  category       ReportCategory
+  priority       ReportPriority @default(LOW)
+  status         ReportStatus   @default(OPEN)
+  aiReply        String?
+  source         String         @default("sms")
+  channel        ChannelType    @default(SMS)
+  confidence     Float?
+  resolution     String?
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  addedToKnowledge Boolean       @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  attachmentsUri String?
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  source      String
+  content     String
+  fileType    String?
+  filePath    String?
+  fileSize    Int?
+  tags        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DocumentChunk {
+  id        String   @id @default(cuid())
+  title     String
+  source    String
+  content   String
+  embedding Json
+  tags      Json?
+  createdAt DateTime @default(now())
+}
+
+model MessageLog {
+  id          String           @id @default(cuid())
+  direction   MessageDirection
+  channel     ChannelType      @default(SMS)
+  phoneNumber String
+  email       String?
+  messengerId String?
+  body        String
+  responseId  String?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+}
