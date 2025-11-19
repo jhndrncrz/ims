@@ -11,6 +11,8 @@ export async function GET() {
         source: true,
         content: true,
         fileType: true,
+        filePath: true,
+        fileSize: true,
         tags: true,
         createdAt: true
       },
@@ -34,7 +36,10 @@ export async function DELETE(request: NextRequest) {
 
   try {
     // Get document to find file path
-    const document = await prisma.document.findUnique({ where: { id } });
+    const document = await prisma.document.findUnique({ 
+      where: { id },
+      select: { filePath: true, source: true }
+    });
     
     if (document?.filePath) {
       const { deleteFile } = await import("@/lib/storage/fileStorage");

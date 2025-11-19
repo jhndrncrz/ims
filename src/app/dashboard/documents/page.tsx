@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionIcon, Badge, Button, Card, Group, Modal, Stack, Table, Tabs, Text, Textarea, TextInput, Title, Paper } from "@mantine/core";
+import { ActionIcon, Badge, Button, Card, Group, Modal, Stack, Table, Tabs, TagsInput, Text, Textarea, TextInput, Title, Paper } from "@mantine/core";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
 import { useForm, zodResolver } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -16,7 +16,7 @@ const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   source: z.string().min(3, "Source must be at least 3 characters"),
   content: z.string().min(20, "Content must be at least 20 characters").optional(),
-  tags: z.string().optional()
+  tags: z.array(z.string()).optional()
 });
 
 export default function DocumentsPage() {
@@ -42,7 +42,7 @@ export default function DocumentsPage() {
       title: "",
       source: "",
       content: "",
-      tags: ""
+      tags: [] as string[]
     },
     validate: zodResolver(schema)
   });
@@ -82,7 +82,7 @@ export default function DocumentsPage() {
         title: values.title,
         source: values.source,
         content: values.content || undefined,
-        tags: values.tags ? values.tags.split(",").map((t) => t.trim()) : [],
+        tags: values.tags || [],
         ...fileData
       });
       
@@ -333,7 +333,11 @@ export default function DocumentsPage() {
               minRows={6}
               {...form.getInputProps("content")}
             />
-            <TextInput label="Tags (comma-separated)" placeholder="ordinance, legal, 2024" {...form.getInputProps("tags")} />
+            <TagsInput 
+              label="Tags" 
+              placeholder="Press Enter to add tags" 
+              {...form.getInputProps("tags")} 
+            />
             <Group justify="flex-end">
               <Button variant="subtle" onClick={close}>
                 Cancel

@@ -1,9 +1,10 @@
 "use client";
 
-import { Badge, Button, Group, Modal, Select, Stack, Text, Textarea } from "@mantine/core";
+import { Badge, Button, Combobox, Group, Input, InputBase, Modal, Stack, Text, Textarea, useCombobox } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { useState } from "react";
+import { IconBuildingBridge, IconFlame, IconFileText, IconQuestionMark, IconAlertTriangle, IconClock, IconCheck } from "@tabler/icons-react";
+import { createElement, useState } from "react";
 
 import { formatDateTime } from "@/lib/formatters";
 import { useReportStore } from "@/store/reportStore";
@@ -22,6 +23,13 @@ const categoryColors: Record<ReportDTO["category"], string> = {
   OTHER: "gray"
 };
 
+const categoryIcons: Record<ReportDTO["category"], React.ComponentType<{ size?: number }>> = {
+  INFRASTRUCTURE: IconBuildingBridge,
+  DISASTER: IconFlame,
+  ADMIN: IconFileText,
+  OTHER: IconQuestionMark
+};
+
 const priorityColors: Record<ReportDTO["priority"], string> = {
   HIGH: "red",
   MEDIUM: "yellow",
@@ -34,9 +42,25 @@ const statusColors: Record<ReportDTO["status"], string> = {
   CLOSED: "teal"
 };
 
+const statusIcons: Record<ReportDTO["status"], React.ComponentType<{ size?: number }>> = {
+  OPEN: IconAlertTriangle,
+  ACKNOWLEDGED: IconClock,
+  CLOSED: IconCheck
+};
+
 export function ReportDetailModal({ report, opened, onClose }: ReportDetailModalProps) {
   const [updating, setUpdating] = useState(false);
   const updateReport = useReportStore((state) => state.updateReport);
+
+  const categoryCombobox = useCombobox({
+    onDropdownClose: () => categoryCombobox.resetSelectedOption(),
+  });
+  const priorityCombobox = useCombobox({
+    onDropdownClose: () => priorityCombobox.resetSelectedOption(),
+  });
+  const statusCombobox = useCombobox({
+    onDropdownClose: () => statusCombobox.resetSelectedOption(),
+  });
 
   const form = useForm({
     initialValues: {
@@ -163,21 +187,138 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
 
         <form onSubmit={form.onSubmit(handleUpdate)}>
           <Stack gap="md">
-            <Select
-              label="Category"
-              data={["INFRASTRUCTURE", "DISASTER", "ADMIN", "OTHER"]}
-              {...form.getInputProps("category")}
-            />
-            <Select
-              label="Priority"
-              data={["LOW", "MEDIUM", "HIGH"]}
-              {...form.getInputProps("priority")}
-            />
-            <Select
-              label="Status"
-              data={["OPEN", "ACKNOWLEDGED", "CLOSED"]}
-              {...form.getInputProps("status")}
-            />
+            <div>
+              <Input.Label>Category</Input.Label>
+              <Combobox
+                store={categoryCombobox}
+                onOptionSubmit={(val) => {
+                  form.setFieldValue("category", val);
+                  categoryCombobox.closeDropdown();
+                }}
+              >
+                <Combobox.Target>
+                  <InputBase
+                    component="button"
+                    type="button"
+                    pointer
+                    rightSection={<Combobox.Chevron />}
+                    onClick={() => categoryCombobox.toggleDropdown()}
+                    rightSectionPointerEvents="none"
+                  >
+                    <Badge 
+                      color={categoryColors[form.values.category as ReportDTO["category"]]} 
+                      leftSection={createElement(categoryIcons[form.values.category as ReportDTO["category"]], { size: 12 })}
+                    >
+                      {form.values.category}
+                    </Badge>
+                  </InputBase>
+                </Combobox.Target>
+
+                <Combobox.Dropdown>
+                  <Combobox.Options>
+                    {(["INFRASTRUCTURE", "DISASTER", "ADMIN", "OTHER"] as const).map((cat) => (
+                      <Combobox.Option value={cat} key={cat}>
+                        <Badge 
+                          color={categoryColors[cat]} 
+                          leftSection={createElement(categoryIcons[cat], { size: 12 })}
+                        >
+                          {cat}
+                        </Badge>
+                      </Combobox.Option>
+                    ))}
+                  </Combobox.Options>
+                </Combobox.Dropdown>
+              </Combobox>
+            </div>
+
+            <div>
+              <Input.Label>Priority</Input.Label>
+              <Combobox
+                store={priorityCombobox}
+                onOptionSubmit={(val) => {
+                  form.setFieldValue("priority", val);
+                  priorityCombobox.closeDropdown();
+                }}
+              >
+                <Combobox.Target>
+                  <InputBase
+                    component="button"
+                    type="button"
+                    pointer
+                    rightSection={<Combobox.Chevron />}
+                    onClick={() => priorityCombobox.toggleDropdown()}
+                    rightSectionPointerEvents="none"
+                  >
+                    <Badge 
+                      color={priorityColors[form.values.priority as ReportDTO["priority"]]} 
+                      variant="dot"
+                    >
+                      {form.values.priority}
+                    </Badge>
+                  </InputBase>
+                </Combobox.Target>
+
+                <Combobox.Dropdown>
+                  <Combobox.Options>
+                    {(["LOW", "MEDIUM", "HIGH"] as const).map((prio) => (
+                      <Combobox.Option value={prio} key={prio}>
+                        <Badge 
+                          color={priorityColors[prio]} 
+                          variant="dot"
+                        >
+                          {prio}
+                        </Badge>
+                      </Combobox.Option>
+                    ))}
+                  </Combobox.Options>
+                </Combobox.Dropdown>
+              </Combobox>
+            </div>
+
+            <div>
+              <Input.Label>Status</Input.Label>
+              <Combobox
+                store={statusCombobox}
+                onOptionSubmit={(val) => {
+                  form.setFieldValue("status", val);
+                  statusCombobox.closeDropdown();
+                }}
+              >
+                <Combobox.Target>
+                  <InputBase
+                    component="button"
+                    type="button"
+                    pointer
+                    rightSection={<Combobox.Chevron />}
+                    onClick={() => statusCombobox.toggleDropdown()}
+                    rightSectionPointerEvents="none"
+                  >
+                    <Badge 
+                      color={statusColors[form.values.status as ReportDTO["status"]]} 
+                      leftSection={createElement(statusIcons[form.values.status as ReportDTO["status"]], { size: 12 })}
+                    >
+                      {form.values.status}
+                    </Badge>
+                  </InputBase>
+                </Combobox.Target>
+
+                <Combobox.Dropdown>
+                  <Combobox.Options>
+                    {(["OPEN", "ACKNOWLEDGED", "CLOSED"] as const).map((stat) => (
+                      <Combobox.Option value={stat} key={stat}>
+                        <Badge 
+                          color={statusColors[stat]} 
+                          leftSection={createElement(statusIcons[stat], { size: 12 })}
+                        >
+                          {stat}
+                        </Badge>
+                      </Combobox.Option>
+                    ))}
+                  </Combobox.Options>
+                </Combobox.Dropdown>
+              </Combobox>
+            </div>
+
             <Textarea
               label="Resolution"
               placeholder="Describe how this was resolved..."

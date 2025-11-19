@@ -31,7 +31,7 @@ async function ingest() {
         fileType: "txt",
         filePath: path.join("data", "docs", file),
         fileSize: stat.size,
-        tags: ["barangay", "official"]
+        tags: JSON.stringify(["barangay", "official"])
       }
     });
 
