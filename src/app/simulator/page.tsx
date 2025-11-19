@@ -12,12 +12,28 @@ const schema = z.object({
   message: z.string().min(5, "Message too short")
 });
 
+// Function to clean markdown formatting
+const cleanMarkdown = (text: string): string => {
+  return text
+    // Remove bold markers
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    // Remove italic markers
+    .replace(/\*(.+?)\*/g, '$1')
+    // Remove headers (###, ##, #)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove horizontal rules
+    .replace(/^---+$/gm, '')
+    // Remove list markers (-, *, 1.)
+    .replace(/^[\-\*]\s+/gm, '• ')
+    .replace(/^\d+\.\s+/gm, (match) => match)
+    // Clean up multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
 export default function SmsSimulatorPage() {
-  const [response, setResponse] = useState<{
-    type: string;
-    reply: string;
-    confidence: number;
-  } | null>(null);
+  const [response, setResponse] = useState<any>(null);
+  const [responseTime, setResponseTime] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
 
   const form = useForm({
@@ -31,32 +47,49 @@ export default function SmsSimulatorPage() {
   const handleSubmit = async (values: typeof form.values) => {
     setSending(true);
     setResponse(null);
+    setResponseTime(null);
+    
+    const startTime = Date.now();
+    
     try {
-      const res = await fetch("/api/sms-webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber: values.phoneNumber,
-          message: values.message,
-          skipSmsReply: true
-        })
-      });
+      // Direct POST to n8n webhook from browser
+      const res = await fetch(
+        // "https://n8n.humain.ph/webhook-test/c8b87bcf-e39d-4d83-9b5e-bb989c70233b",
+        "https://n8n.humain.ph/webhook/c8b87bcf-e39d-4d83-9b5e-bb989c70233b",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: values.message,
+            phoneNumber: values.phoneNumber
+          })
+        }
+      );
 
-      if (!res.ok) throw new Error("Failed to send");
+      const elapsed = Date.now() - startTime;
 
-      const data = (await res.json()) as { result: { type: string; reply: string; confidence: number } };
-      setResponse(data.result);
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      setResponse(data);
+      setResponseTime(elapsed);
+      
       notifications.show({
-        title: "SMS Sent",
-        message: "Check the response below",
+        title: "Message Sent to n8n",
+        message: `Response received in ${elapsed}ms`,
         color: "teal"
       });
     } catch (error) {
       console.error(error);
+      const elapsed = Date.now() - startTime;
+      
       notifications.show({
         title: "Error",
-        message: "Failed to send SMS",
-        color: "red"
+        message: error instanceof Error ? error.message : "Failed to send message",
+        color: "red",
+        autoClose: 8000
       });
     } finally {
       setSending(false);
@@ -104,19 +137,32 @@ export default function SmsSimulatorPage() {
         <Paper withBorder p="md" maw={600}>
           <Stack gap="sm">
             <Group justify="space-between">
-              <Text fw={600}>AI Response</Text>
+              <Text fw={600}>BarangAI Response</Text>
               <Group gap="xs">
-                <Badge>{response.type.toUpperCase()}</Badge>
-                <Badge>
-                  {(response.confidence * 100).toFixed(0)}% confidence
-                </Badge>
+                <Badge color="green">Success</Badge>
+                {responseTime && (
+                  <Badge color="blue" variant="light">
+                    {responseTime}ms
+                  </Badge>
+                )}
               </Group>
             </Group>
-            <Paper withBorder p="sm">
-              <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                {response.reply}
-              </Text>
-            </Paper>
+            
+            {/* Display the output message in a user-friendly way */}
+            {response.output ? (
+              <Paper withBorder p="md" bg="blue.0">
+                <Text size="sm" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                  {cleanMarkdown(response.output)}
+                </Text>
+              </Paper>
+            ) : (
+              <Paper withBorder p="sm" bg="gray.0">
+                <Text size="xs" c="dimmed" fw={500} mb="xs">Raw Response:</Text>
+                <Text size="sm" style={{ whiteSpace: "pre-wrap" }} ff="monospace">
+                  {JSON.stringify(response, null, 2)}
+                </Text>
+              </Paper>
+            )}
           </Stack>
         </Paper>
       )}
