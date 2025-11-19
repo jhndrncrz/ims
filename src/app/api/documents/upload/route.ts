@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mammoth from "mammoth";
-import Tesseract from "tesseract.js";
+import { createWorker } from "tesseract.js";
 import { PDFParse } from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist";
+import { createCanvas } from "canvas";
 
 import { vectorStore } from "@/lib/rag/vector-store";
 
@@ -52,26 +54,61 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
           console.log("⚠️ PDF text extraction failed, falling back to OCR:", textError);
         }
         
-        // Fall back to OCR for image-based PDFs
-        console.log("🖼️ Starting OCR on PDF pages...");
-        const { data: { text } } = await Tesseract.recognize(
-          buffer,
-          'eng+chi_sim+chi_tra+fil',
-          {
-            logger: m => {
-              if (m.status === 'recognizing text') {
-                console.log(`PDF OCR progress: ${Math.round(m.progress * 100)}%`);
-              }
+        // Fall back to OCR for image-based PDFs - convert to images first
+        console.log("🖼️ Converting PDF to images for OCR...");
+        
+        // Load PDF document
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
+        const pdfDoc = await loadingTask.promise;
+        const numPages = pdfDoc.numPages;
+        console.log(`📄 PDF has ${numPages} pages`);
+        
+        const worker = await createWorker('eng');
+        const allText: string[] = [];
+        
+        try {
+          // Process each page
+          for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+            console.log(`📖 Processing page ${pageNum}/${numPages}...`);
+            
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+            
+            // Create canvas
+            const canvas = createCanvas(viewport.width, viewport.height);
+            const context = canvas.getContext('2d');
+            
+            // Render PDF page to canvas
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport,
+              canvas: canvas
+            };
+            await page.render(renderContext as unknown as Parameters<typeof page.render>[0]).promise;
+            
+            // Convert canvas to buffer
+            const imageBuffer = canvas.toBuffer('image/png');
+            
+            // Run OCR on the image
+            const { data: { text } } = await worker.recognize(imageBuffer);
+            
+            if (text && text.trim().length > 0) {
+              allText.push(text.trim());
+              console.log(`✅ Page ${pageNum}: ${text.trim().length} chars extracted`);
             }
           }
-        );
-        
-        if (!text || text.trim().length === 0) {
-          throw new Error("PDF contains no recognizable text even after OCR");
+          
+          const combinedText = allText.join('\n\n');
+          
+          if (!combinedText || combinedText.trim().length === 0) {
+            throw new Error("PDF contains no recognizable text even after OCR");
+          }
+          
+          console.log(`🔍 Total PDF OCR extracted: ${combinedText.length} chars from ${numPages} pages`);
+          return combinedText;
+        } finally {
+          await worker.terminate();
         }
-        
-        console.log(`🔍 PDF OCR extracted: ${text.length} chars`);
-        return text;
       }
 
       case "docx": {
@@ -96,48 +133,38 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
         
         // Fall back to OCR for image-based or corrupted DOCX
         console.log("🖼️ Starting OCR on DOCX...");
-        const { data: { text } } = await Tesseract.recognize(
-          buffer,
-          'eng+chi_sim+chi_tra+fil',
-          {
-            logger: m => {
-              if (m.status === 'recognizing text') {
-                console.log(`DOCX OCR progress: ${Math.round(m.progress * 100)}%`);
-              }
-            }
+        const worker = await createWorker('eng');
+        try {
+          const { data: { text } } = await worker.recognize(buffer);
+          
+          if (!text || text.trim().length === 0) {
+            throw new Error("DOCX contains no recognizable text even after OCR");
           }
-        );
-        
-        if (!text || text.trim().length === 0) {
-          throw new Error("DOCX contains no recognizable text even after OCR");
+          
+          console.log(`🔍 DOCX OCR extracted: ${text.length} chars`);
+          return text;
+        } finally {
+          await worker.terminate();
         }
-        
-        console.log(`🔍 DOCX OCR extracted: ${text.length} chars`);
-        return text;
       }
 
       case "image": {
         // Use Tesseract.js for OCR on images
         console.log("🖼️ Starting OCR on image...");
         
-        const { data: { text } } = await Tesseract.recognize(
-          buffer,
-          'eng+chi_sim+chi_tra+fil', // English + Chinese Simplified + Traditional + Filipino
-          {
-            logger: m => {
-              if (m.status === 'recognizing text') {
-                console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
-              }
-            }
+        const worker = await createWorker('eng');
+        try {
+          const { data: { text } } = await worker.recognize(buffer);
+          
+          if (!text || text.trim().length === 0) {
+            throw new Error("Image contains no recognizable text");
           }
-        );
-        
-        if (!text || text.trim().length === 0) {
-          throw new Error("Image contains no recognizable text");
+          
+          console.log(`🔍 OCR extracted: ${text.length} chars`);
+          return text;
+        } finally {
+          await worker.terminate();
         }
-        
-        console.log(`🔍 OCR extracted: ${text.length} chars`);
-        return text;
       }
 
       default:

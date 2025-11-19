@@ -1,10 +1,12 @@
 "use client";
 
-import { Card, Grid, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Button, Card, Grid, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import { AreaChart, BarChart } from "@mantine/charts";
-import { IconAlertTriangle, IconChecks, IconClock, IconReport, IconTrendingUp, IconUsers } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { IconAlertTriangle, IconCalendar, IconChecks, IconClock, IconFilterOff, IconReport, IconTrendingUp, IconUsers } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
+import dayjs from "dayjs";
 
 import { useReportStore } from "@/store/reportStore";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -16,14 +18,33 @@ import { ReportDetailModal } from "@/components/dashboard/ReportDetailModal";
 import type { ReportDTO } from "@/types/report";
 
 export default function DashboardPage() {
-  const reports = useReportStore((state) => state.reports);
+  const allReports = useReportStore((state) => state.reports);
   const fetchReports = useReportStore((state) => state.fetchReports);
   const [selectedReport, setSelectedReport] = useState<ReportDTO | null>(null);
   const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure(false);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
 
   useEffect(() => {
     void fetchReports();
   }, [fetchReports]);
+
+  // Filter reports by date range
+  const reports = useMemo(() => {
+    if (!dateRange[0] && !dateRange[1]) {
+      return allReports;
+    }
+    
+    return allReports.filter((report) => {
+      const reportDate = dayjs(report.createdAt);
+      if (dateRange[0] && reportDate.isBefore(dayjs(dateRange[0]), 'day')) return false;
+      if (dateRange[1] && reportDate.isAfter(dayjs(dateRange[1]), 'day')) return false;
+      return true;
+    });
+  }, [allReports, dateRange]);
+
+  const clearDateFilter = () => {
+    setDateRange([null, null]);
+  };
 
   const handleViewReport = (reportId: string) => {
     const report = reports.find((r) => r.id === reportId);
@@ -46,8 +67,9 @@ export default function DashboardPage() {
   };
 
   const uniqueCallers = new Set(reports.map((r) => r.phoneNumber)).size;
-  const avgConfidence = reports.length > 0
-    ? reports.filter(r => r.confidence).reduce((acc, r) => acc + (r.confidence || 0), 0) / reports.filter(r => r.confidence).length
+  const reportsWithConfidence = reports.filter(r => r.confidence);
+  const avgConfidence = reportsWithConfidence.length > 0
+    ? (reportsWithConfidence.reduce((acc, r) => acc + (r.confidence || 0), 0) / reportsWithConfidence.length) * 100
     : 0;
   const resolutionRate = stats.total > 0 ? (stats.closed / stats.total) * 100 : 0;
 
@@ -77,12 +99,47 @@ export default function DashboardPage() {
 
   return (
     <Stack gap="lg">
-      <div>
-        <Title order={2}>Dashboard Overview</Title>
-        <Text c="dimmed" size="sm">
-          Real-time insights and statistics for Barangay Mabuhay
-        </Text>
-      </div>
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Title order={2}>Dashboard Overview</Title>
+          <Text c="dimmed" size="sm">
+            Real-time insights and statistics
+          </Text>
+        </div>
+        
+        <Paper p="md" withBorder>
+          <Stack gap="sm">
+            <Text size="sm" fw={500}>Filter by Date Range</Text>
+            <Group>
+              <DatePickerInput
+                type="range"
+                placeholder="Select date range"
+                value={dateRange}
+                onChange={setDateRange}
+                leftSection={<IconCalendar size={16} />}
+                clearable
+                style={{ minWidth: 280 }}
+              />
+              {(dateRange[0] || dateRange[1]) && (
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="gray"
+                  leftSection={<IconFilterOff size={14} />}
+                  onClick={clearDateFilter}
+                >
+                  Clear
+                </Button>
+              )}
+            </Group>
+            {(dateRange[0] || dateRange[1]) && (
+              <Text size="xs" c="dimmed">
+                Showing {reports.length} of {allReports.length} reports
+              </Text>
+            )}
+          </Stack>
+        </Paper>
+      </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }}>
         <StatCard icon={IconReport} label="Total Reports" value={stats.total} color="blue" />
@@ -102,7 +159,7 @@ export default function DashboardPage() {
           avgConfidence={avgConfidence}
           resolutionRate={resolutionRate}
           totalReports={stats.total}
-          reportsWithConfidence={reports.filter(r => r.confidence).length}
+          reportsWithConfidence={reportsWithConfidence.length}
           highPriorityOpenCount={reports.filter(r => r.priority === "HIGH" && r.status === "OPEN").length}
         />
       </SimpleGrid>

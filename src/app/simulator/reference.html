@@ -1,0 +1,316 @@
+Use the following as reference for the nokia phone html and css:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="style.css">
+  <title>Nokia</title>
+  <style>
+    html, body {
+  width: 100%;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  background-color: #444;
+}
+.mobile {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.phone {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 240px;
+  height: 520px;
+  background: #232526;
+  border-radius: 30px;
+  box-shadow:2px 2px 2px #444, inset 0 60px 0 -36px rgb(142, 5, 99);
+  padding: 10px;
+}
+.phone-mirror {
+  position: relative;
+  width: 230px;
+  height: 510px;
+  background-color:rgba(0,0,0,0.2);
+  border-radius: 30px;
+}
+.screen {
+  width: 210px;
+  height: 250px;
+  margin: 0 auto;
+  margin-top: 10px;
+  background: #000000;
+  background: -webkit-linear-gradient(to right, #434343, #000000);
+  background: linear-gradient(to right, #434343, #000000);
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+.screen > p {
+  font-size: 14px;
+}
+.line-rec {
+  position: relative;
+  width: 80px;
+  height: 5px;
+  margin: 0px auto 0 auto;
+  top: 10px;
+  background-color: #000;
+  border-radius: 30px;
+}
+.text-center {
+  text-align: center;
+}
+.white-text {
+  color: #777;
+}
+.flex-screen {
+  width: 190px;
+  height: 180px;
+  margin: 0 auto;
+  background-color: #444;
+}
+.flex {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+.btn {
+  width: 65px;
+  height: 28px;
+  user-select: none;
+  color: #666;
+  	box-shadow:  -1px 1px #111,
+		 -1px 1px #111,
+		 -2px 2px #111,
+		 -2px 2px #111,
+		 -2px 1px #111;
+  border-radius: 30px;
+}
+
+.menu-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  border-radius: 20px;
+}
+.inner-btn {
+  width: 50px;
+  height: 44px;
+     -moz-box-shadow:    inset 0 0 5px #111;
+   -webkit-box-shadow: inset 0 0 5px #111;
+   box-shadow:         inset 0 0 5px #111;
+  border-radius: 20px;
+}
+.abs-btn {
+  position: absolute;
+  top: 59.9%;
+  left: 4%;
+  width: 65px;
+  height: 28px;
+  color: #666;
+  box-shadow:  -1px 1px #111,
+		 -1px 1px #111,
+		 -2px 2px #111,
+		 -2px 2px #111,
+		 -2px 1px #111;
+  border-radius: 30px;
+}
+.abs-btn2 {
+  position: absolute;
+  top: 59.9%;
+  right: 4%;
+  width: 65px;
+  height: 28px;
+  color: #666;
+  box-shadow:  -1px 1px #111,
+		 -1px 1px #111,
+		 -2px 2px #111,
+		 -2px 2px #111,
+		 -2px 1px #111;
+  border-radius: 30px;
+}
+.imcomp-rec {
+  width: 25px;
+  height: 8px;
+  margin: 9px 0 0 18px;
+  border-left: 2px solid #777;
+  border-right: 2px solid #777;
+  border-top: 2px solid #777;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+.btn-line {
+  width: 25px;
+  height: 1px;
+  background-color: #777;
+}
+.digit {
+  font-size: 18px;
+}
+.symbol {
+  font-size: 10px;
+  margin: 6px 0 0 15px;
+}
+.last-dot {
+  width: 6px;
+  height: 2px;
+  margin: 0 auto;
+  margin-top: 20px;
+  background-color: #000;
+}
+.mt-10 {
+  margin-top: 10px;
+}
+.mt-5 {
+  margin-top: 5px;
+}
+.mt-7 {
+  margin-top: 7px;
+}
+.mx-10 {
+  margin: 0 10px;
+}
+.px-10 {
+  padding: 0 10px;
+}
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.flex-btn {
+  display: flex;
+  justify-content: space-around;
+  color: #eee;
+}
+.flex-start {
+  display: flex;
+  justify-content: flex-start;
+}
+  </style>
+</head>
+<body>
+  <div class="mobile">
+    <div class="phone">
+      <div class="phone-mirror">
+        <div class="screen">
+          <div class="line-rec"></div>
+          <p class="text-center white-text">NOKIA</p>
+          <div class="flex-screen"></div>
+        </div>
+        <div class="flex mt-10">
+          <div class="btn flex-center">
+            <div class="btn-line"></div>
+          </div>
+          <div class="btn menu-btn">
+            <div class="inner-btn"></div>
+          </div>
+          <div class="btn flex-center">
+            <div class="btn-line"></div>
+          </div>
+        </div>
+        <div class="abs-btn">
+          <div class="imcomp-rec"></div>
+        </div>
+        <div class="abs-btn2">
+          <div class="imcomp-rec"></div>
+        </div>
+        <div class="flex mt-10">
+          <div class="btn flex-start px-10">
+            <div class="digit">1</div>
+            <div class="symbol">&#9903;</div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">2</div>
+              <div class="symbol">abc</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">3</div>
+              <div class="symbol">def</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex mt-7">
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">4</div>
+              <div class="symbol">ghi</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">5</div>
+              <div class="symbol">jkl</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">6</div>
+              <div class="symbol">mno</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex mt-7">
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">7</div>
+              <div class="symbol">pqrs</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">8</div>
+              <div class="symbol">tuv</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">9</div>
+              <div class="symbol">wxyz</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex mt-7">
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">*</div>
+              <div class="symbol">&#9903;</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">0</div>
+              <div class="symbol">&#9903;</div>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="btn flex-start px-10">
+              <div class="digit">#</div>
+              <div class="symbol">&#8679;</div>
+            </div>
+          </div>
+        </div>
+        <div class="last-dot"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
