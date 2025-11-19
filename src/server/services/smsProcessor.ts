@@ -43,7 +43,8 @@ export const smsProcessor = {
       const ackMessage =
         "Salamat! Naitala ang ulat mo. Susubaybayan ito ng barangay team. Mga tanong? Sagutin lang ang SMS na ito.";
 
-      const report = await reportService.create({
+      // Use enhanced report creation with field extraction and sentiment analysis
+      const report = await reportService.createWithEnhancement({
         phoneNumber: normalizedPhone,
         message: input.message,
         category: classification.category,

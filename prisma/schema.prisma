@@ -55,6 +55,20 @@ model Report {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   attachmentsUri String?
+  
+  // Enhanced extraction fields
+  extractedLocation  String?
+  extractedTime      String?
+  incidentType       String?
+  severity           String?
+  actionNeeded       String?
+  extractedEntities  Json?
+  summaryGenerated   String?
+  
+  // Sentiment analysis fields
+  sentiment          String?
+  sentimentScore     Float?
+  sentimentKeywords  Json?
 }
 
 model Document {
@@ -91,4 +105,29 @@ model MessageLog {
   responseId  String?
   metadata    Json?
   createdAt   DateTime         @default(now())
+}
+
+model ConversationSentiment {
+  id                String   @id @default(cuid())
+  phoneNumber       String   @unique
+  sentiment         String
+  sentimentScore    Float
+  sentimentKeywords Json
+  summary           String?
+  lastAnalyzedAt    DateTime @default(now())
+  messageCount      Int
+  updatedAt         DateTime @updatedAt
+}
+
+model BarangaySettings {
+  id                  String   @id @default(cuid())
+  barangayName        String   @default("Barangay Sample")
+  municipalityCity    String   @default("Municipality/City")
+  province            String   @default("Province")
+  captainName         String?
+  logoPath            String?
+  contactNumber       String?
+  address             String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { BarangaySettings } from "@/types/templates";
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
@@ -10,7 +11,7 @@ import {
   IconSettings
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -25,9 +26,25 @@ const navigation = [
 ];
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [settings, setSettings] = useState<BarangaySettings | null>(null);
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const data = await response.json() as BarangaySettings;
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    }
+    void fetchSettings();
+  }, []);
 
   return (
     <AppShell
@@ -49,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Group>
           <Group>
             <Text size="sm" c="dimmed">
-              Barangay Mabuhay
+              {settings ? `Logged in as: ${settings.barangayName}` : "Loading settings..."}
             </Text>
           </Group>
         </Group>

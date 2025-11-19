@@ -1,12 +1,14 @@
 "use client";
 
+import { settingsService } from "@/server/services/settingsService";
+import { BarangaySettings } from "@/types/templates";
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconMessage
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 type SimulatorLayoutProps = {
   children: ReactNode;
@@ -17,9 +19,18 @@ const navigation = [
 ];
 
 export function SimulatorLayout({ children }: SimulatorLayoutProps) {
+  const [settings, setSettings] = useState<BarangaySettings | null>(null);
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
+  
+  useEffect(() => {
+    async function fetchSettings() {
+      const fetchedSettings = await settingsService.getSettings();
+      setSettings(fetchedSettings);
+    }
+    void fetchSettings();
+  }, []);
 
   return (
     <AppShell
@@ -41,7 +52,7 @@ export function SimulatorLayout({ children }: SimulatorLayoutProps) {
           </Group>
           <Group>
             <Text size="sm" c="dimmed">
-              Barangay Mabuhay
+              {settings ? `Logged in as: ${settings.barangayName}` : "Loading settings..."}
             </Text>
           </Group>
         </Group>

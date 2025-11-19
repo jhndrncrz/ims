@@ -17,7 +17,11 @@ import {
   Divider,
   Badge,
   Paper,
-  Code
+  Code,
+  FileButton,
+  Image,
+  Box,
+  Textarea
 } from "@mantine/core";
 import {
   IconSettings,
@@ -28,16 +32,33 @@ import {
   IconDatabase,
   IconCheck,
   IconAlertTriangle,
-  IconInfoCircle
+  IconInfoCircle,
+  IconUpload,
+  IconTrash,
+  IconPhoto
 } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useState, useEffect } from "react";
 
+interface BarangaySettings {
+  barangayName: string;
+  municipalityCity: string;
+  province: string;
+  captainName: string;
+  contactNumber: string;
+  address: string;
+  logoPath: string | null;
+}
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<string | null>("sms");
+  const [activeTab, setActiveTab] = useState<string | null>("barangay");
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, boolean>>({});
+  const [barangaySettings, setBarangaySettings] = useState<BarangaySettings | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const smsForm = useForm({
     initialValues: {
@@ -81,12 +102,153 @@ export default function SettingsPage() {
     }
   });
 
+  const barangayForm = useForm({
+    initialValues: {
+      barangayName: "",
+      municipalityCity: "",
+      province: "",
+      captainName: "",
+      contactNumber: "",
+      address: ""
+    }
+  });
+
   useEffect(() => {
     // Load current env values (mock - in real app would come from API)
     smsForm.setFieldValue("enabled", true);
     aiForm.setFieldValue("enabled", true);
+    
+    // Load barangay settings
+    void fetchBarangaySettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchBarangaySettings = async () => {
+    try {
+      const response = await fetch("/api/settings");
+      if (response.ok) {
+        const data = await response.json() as BarangaySettings;
+        setBarangaySettings(data);
+        barangayForm.setValues({
+          barangayName: data.barangayName,
+          municipalityCity: data.municipalityCity,
+          province: data.province,
+          captainName: data.captainName || "",
+          contactNumber: data.contactNumber || "",
+          address: data.address || ""
+        });
+        if (data.logoPath) {
+          // Extract filename from path (e.g., "uploads/logos/file.png" -> "logos/file.png")
+          const filename = data.logoPath.replace(/^uploads\//, "");
+          setLogoPreview(`/api/uploads/${filename}`);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch settings:", error);
+    }
+  };
+
+  const saveBarangaySettings = async (values: typeof barangayForm.values) => {
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+
+      if (response.ok) {
+        const data = await response.json() as BarangaySettings;
+        setBarangaySettings(data);
+        notifications.show({
+          title: "Saved",
+          message: "Barangay settings updated successfully",
+          color: "teal"
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "Failed to save settings",
+        color: "red"
+      });
+    }
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile) return;
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", logoFile);
+
+      const response = await fetch("/api/settings/logo", {
+        method: "POST",
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json() as BarangaySettings;
+        setBarangaySettings(data);
+        if (data.logoPath) {
+          // Extract filename from path (e.g., "uploads/logos/file.png" -> "logos/file.png")
+          const filename = data.logoPath.replace(/^uploads\//, "");
+          setLogoPreview(`/api/uploads/${filename}`);
+        }
+        setLogoFile(null);
+        notifications.show({
+          title: "Success",
+          message: "Logo uploaded successfully",
+          color: "teal",
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "Failed to upload logo",
+        color: "red"
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    try {
+      const response = await fetch("/api/settings/logo", {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        const data = await response.json() as BarangaySettings;
+        setBarangaySettings(data);
+        setLogoPreview(null);
+        setLogoFile(null);
+        notifications.show({
+          title: "Success",
+          message: "Logo removed successfully",
+          color: "teal"
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "Failed to remove logo",
+        color: "red"
+      });
+    }
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setLogoFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const testConnection = async (service: string) => {
     setTestingConnection(true);
@@ -157,6 +319,9 @@ export default function SettingsPage() {
 
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
+          <Tabs.Tab value="barangay" leftSection={<IconSettings size={16} />}>
+            Barangay Info
+          </Tabs.Tab>
           <Tabs.Tab value="sms" leftSection={<IconCloud size={16} />}>
             Alibaba SMS
           </Tabs.Tab>
@@ -173,6 +338,155 @@ export default function SettingsPage() {
             System
           </Tabs.Tab>
         </Tabs.List>
+
+        <Tabs.Panel value="barangay" pt="md">
+          <Card withBorder shadow="sm">
+            <form onSubmit={barangayForm.onSubmit(saveBarangaySettings)}>
+              <Stack gap="md">
+                <div>
+                  <Text fw={600} size="lg">Barangay Information</Text>
+                  <Text size="sm" c="dimmed">Configure your barangay details for PDF reports and templates</Text>
+                </div>
+
+                <Divider label="Official Logo" labelPosition="left" />
+
+                <Group align="flex-start">
+                  <Stack gap="xs" style={{ flex: 1 }}>
+                    <Text size="sm" fw={500}>Upload Logo</Text>
+                    <Text size="xs" c="dimmed">
+                      Upload your barangay logo. Recommended: PNG or JPEG, 500x500px or larger.
+                      This will appear on PDF reports and templates.
+                    </Text>
+                    
+                    <Group>
+                      <FileButton onChange={handleFileChange} accept="image/png,image/jpeg">
+                        {(props) => (
+                          <Button {...props} leftSection={<IconUpload size={16} />} variant="light">
+                            Select Logo
+                          </Button>
+                        )}
+                      </FileButton>
+                      
+                      {logoFile && (
+                        <Button
+                          onClick={() => void handleLogoUpload()}
+                          loading={uploadingLogo}
+                          color="teal"
+                        >
+                          Upload
+                        </Button>
+                      )}
+
+                      {logoPreview && !logoFile && (
+                        <Button
+                          onClick={() => void handleLogoRemove()}
+                          leftSection={<IconTrash size={16} />}
+                          color="red"
+                          variant="light"
+                        >
+                          Remove Logo
+                        </Button>
+                      )}
+                    </Group>
+
+                    {logoFile && (
+                      <Text size="xs" c="dimmed">
+                        Selected: {logoFile.name} ({(logoFile.size / 1024).toFixed(1)} KB)
+                      </Text>
+                    )}
+                  </Stack>
+
+                  <Box
+                    style={{
+                      width: 120,
+                      height: 120,
+                      border: "2px dashed #dee2e6",
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#f8f9fa"
+                    }}
+                  >
+                    {logoPreview ? (
+                      <Image
+                        src={logoPreview}
+                        alt="Logo preview"
+                        width={100}
+                        height={100}
+                        fit="contain"
+                      />
+                    ) : (
+                      <IconPhoto size={40} color="#adb5bd" />
+                    )}
+                  </Box>
+                </Group>
+
+                <Divider label="Barangay Details" labelPosition="left" />
+
+                <TextInput
+                  label="Barangay Name"
+                  placeholder="Barangay Sample"
+                  description="Official name of your barangay"
+                  required
+                  {...barangayForm.getInputProps("barangayName")}
+                />
+
+                <TextInput
+                  label="Municipality/City"
+                  placeholder="Quezon City"
+                  description="Municipality or city where barangay is located"
+                  required
+                  {...barangayForm.getInputProps("municipalityCity")}
+                />
+
+                <TextInput
+                  label="Province"
+                  placeholder="Metro Manila"
+                  description="Province or region"
+                  required
+                  {...barangayForm.getInputProps("province")}
+                />
+
+                <TextInput
+                  label="Barangay Captain"
+                  placeholder="Hon. Juan Dela Cruz"
+                  description="Name of current barangay captain (optional)"
+                  {...barangayForm.getInputProps("captainName")}
+                />
+
+                <TextInput
+                  label="Contact Number"
+                  placeholder="+63 912 345 6789"
+                  description="Official barangay contact number"
+                  {...barangayForm.getInputProps("contactNumber")}
+                />
+
+                <Textarea
+                  label="Address"
+                  placeholder="123 Main Street, Barangay Sample"
+                  description="Complete barangay hall address"
+                  minRows={2}
+                  {...barangayForm.getInputProps("address")}
+                />
+
+                <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
+                  <Text size="sm">
+                    This information will be used to generate professional PDF reports including 
+                    Incident Reports and Blotter Entries. Make sure all details are accurate.
+                  </Text>
+                </Alert>
+
+                <Group justify="flex-end">
+                  <Button variant="subtle" onClick={() => barangayForm.reset()}>
+                    Reset
+                  </Button>
+                  <Button type="submit">Save Settings</Button>
+                </Group>
+              </Stack>
+            </form>
+          </Card>
+        </Tabs.Panel>
 
         <Tabs.Panel value="sms" pt="md">
           <Card withBorder shadow="sm">
@@ -462,7 +776,7 @@ export default function SettingsPage() {
 
                 <NumberInput
                   label="Port"
-                  placeholder={993}
+                  placeholder={"993"}
                   description="IMAP port (usually 993 for SSL)"
                   {...emailForm.getInputProps("port")}
                 />

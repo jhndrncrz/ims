@@ -6,12 +6,33 @@ import { useCallback, useEffect, useState } from "react";
 import { ConversationList } from "@/components/dashboard/ConversationList";
 import { ConversationDetail } from "@/components/dashboard/ConversationDetail";
 
+type EnhancedFields = {
+  extractedLocation?: string | null;
+  extractedTime?: string | null;
+  incidentType?: string | null;
+  severity?: string | null;
+  actionNeeded?: string | null;
+  summaryGenerated?: string | null;
+  sentiment?: string | null;
+  sentimentScore?: number | null;
+  sentimentKeywords?: string[] | null;
+};
+
 type Message = {
   id: string;
   direction: "INBOUND" | "OUTBOUND";
   body: string;
   createdAt: string;
   metadata?: Record<string, unknown>;
+  enhancedFields?: EnhancedFields | null;
+};
+
+type ConversationSentiment = {
+  sentiment: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
+  score: number;
+  keywords: string[];
+  summary?: string | null;
+  lastAnalyzedAt?: string;
 };
 
 type Conversation = {
@@ -23,6 +44,7 @@ type Conversation = {
     createdAt: string;
   };
   messages: Message[];
+  conversationSentiment?: ConversationSentiment | null;
 };
 
 // Helper to extract channel and display identifier from phoneNumber
@@ -46,12 +68,13 @@ export default function ConversationsPage() {
     try {
       const response = await fetch("/api/conversations");
       const data = await response.json();
-      setConversations(data.conversations);
-      if (data.conversations.length > 0 && !selectedConv) {
+      setConversations(data.conversations || []);
+      if (data.conversations && data.conversations.length > 0 && !selectedConv) {
         setSelectedConv(data.conversations[0]);
       }
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -83,7 +106,7 @@ export default function ConversationsPage() {
           <Text c="dimmed">No conversations yet. Send a test SMS to get started.</Text>
         </Card>
       ) : (
-        <Group align="flex-start" gap="md" wrap="nowrap">
+        <Group align="stretch" gap="md" wrap="nowrap">
           <ConversationList
             conversations={conversations}
             selectedPhoneNumber={selectedConv?.phoneNumber || null}
@@ -96,7 +119,9 @@ export default function ConversationsPage() {
               phoneNumber={selectedConv.phoneNumber}
               messageCount={selectedConv.messageCount}
               messages={selectedConv.messages}
+              conversationSentiment={selectedConv.conversationSentiment}
               parseIdentifier={parseIdentifier}
+              onRefresh={fetchConversations}
             />
           )}
         </Group>

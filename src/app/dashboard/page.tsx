@@ -3,21 +3,40 @@
 import { Card, Grid, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { AreaChart, BarChart } from "@mantine/charts";
 import { IconAlertTriangle, IconChecks, IconClock, IconReport, IconTrendingUp, IconUsers } from "@tabler/icons-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDisclosure } from "@mantine/hooks";
 
 import { useReportStore } from "@/store/reportStore";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { SystemInsights } from "@/components/dashboard/SystemInsights";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PriorityReportsWidget } from "@/components/dashboard/PriorityReportsWidget";
+import { ReportDetailModal } from "@/components/dashboard/ReportDetailModal";
+import type { ReportDTO } from "@/types/report";
 
 export default function DashboardPage() {
   const reports = useReportStore((state) => state.reports);
   const fetchReports = useReportStore((state) => state.fetchReports);
+  const [selectedReport, setSelectedReport] = useState<ReportDTO | null>(null);
+  const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure(false);
 
   useEffect(() => {
     void fetchReports();
   }, [fetchReports]);
+
+  const handleViewReport = (reportId: string) => {
+    const report = reports.find((r) => r.id === reportId);
+    if (report) {
+      setSelectedReport(report);
+      openDetail();
+    }
+  };
+
+  const handleCloseDetail = () => {
+    closeDetail();
+    setSelectedReport(null);
+  };
 
   const stats = {
     total: reports.length,
@@ -73,6 +92,9 @@ export default function DashboardPage() {
       </SimpleGrid>
 
       <QuickActions openReportsCount={stats.open} />
+
+      {/* Priority Reports Widget */}
+      <PriorityReportsWidget reports={reports} onViewReport={handleViewReport} />
 
       <SimpleGrid cols={{ base: 1, md: 1 }}>
         <SystemInsights
@@ -159,6 +181,9 @@ export default function DashboardPage() {
           </Card>
         </Grid.Col>
       </Grid>
+
+      {/* Report Detail Modal */}
+      <ReportDetailModal report={selectedReport} opened={detailOpened} onClose={handleCloseDetail} />
     </Stack>
   );
 }

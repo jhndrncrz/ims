@@ -40,7 +40,7 @@ export default function ReportsPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="flex-start">
+      <Group justify="space-between">
         <div>
           <Title order={2}>Citizen Reports</Title>
           <Text c="dimmed" size="sm">
