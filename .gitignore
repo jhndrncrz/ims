@@ -22,9 +22,16 @@
 # production
 /build
 
+# tools
+.qoder
+
+# local data
+uploads/
+
 # misc
 .DS_Store
 *.pem
+package-lock.json
 
 # debug
 npm-debug.log*
