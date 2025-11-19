@@ -55,6 +55,14 @@ export class HTMLTemplateService {
       align-items: center;
       justify-content: center;
       background: #f5f5f5;
+      overflow: hidden;
+    }
+    
+    .header-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
     }
     
     .header-text {
@@ -213,7 +221,7 @@ export class HTMLTemplateService {
   <div class="header">
     <div class="header-logo">
       ${settings.logoPath 
-        ? `<img src="/api/uploads/${settings.logoPath.replace(/^uploads\//, '')}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;" />`
+        ? `<img src="/api/uploads/${settings.logoPath.replace(/^uploads\//, '')}" alt="Logo" />`
         : `<span style="color: #999; font-size: 10pt;">LOGO</span>`
       }
     </div>
@@ -512,7 +520,7 @@ export class HTMLTemplateService {
   <div class="header">
     <div class="header-logo">
       ${settings.logoPath 
-        ? `<img src="/api/uploads/${settings.logoPath.replace(/^uploads\//, '')}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;" />`
+        ? `<img src="/api/uploads/${settings.logoPath.replace(/^uploads\//, '')}" alt="Logo" />`
         : `<span style="color: #999; font-size: 10pt;">LOGO</span>`
       }
     </div>

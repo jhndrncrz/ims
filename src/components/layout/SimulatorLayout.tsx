@@ -1,6 +1,5 @@
 "use client";
 
-import { settingsService } from "@/server/services/settingsService";
 import { BarangaySettings } from "@/types/templates";
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -26,8 +25,15 @@ export function SimulatorLayout({ children }: SimulatorLayoutProps) {
   
   useEffect(() => {
     async function fetchSettings() {
-      const fetchedSettings = await settingsService.getSettings();
-      setSettings(fetchedSettings);
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const data = await response.json() as BarangaySettings;
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
     }
     void fetchSettings();
   }, []);

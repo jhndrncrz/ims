@@ -35,4 +35,14 @@ export type ReportDTO = {
   sentiment?: ReportSentiment | null;
   sentimentScore?: number | null;
   sentimentKeywords?: string[] | null;
+  
+  // AI recommendations
+  recommendations?: {
+    recommendations: string[];
+    urgencyLevel: "IMMEDIATE" | "URGENT" | "MODERATE" | "LOW";
+    suggestedActions: string[];
+    estimatedResolutionTime: string;
+    requiredResources: string[];
+  } | null;
+  recommendationsGeneratedAt?: string | null;
 };

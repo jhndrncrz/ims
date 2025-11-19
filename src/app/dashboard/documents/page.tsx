@@ -25,7 +25,17 @@ export default function DocumentsPage() {
   
   const [activeTab, setActiveTab] = useState<string | null>("documents");
   const [opened, { open, close }] = useDisclosure(false);
-  const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string; fileType?: string | null; filePath?: string | null; id: string } | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ 
+    id: string;
+    title: string; 
+    content: string; 
+    fileType?: string | null; 
+    filePath?: string | null;
+    source?: string | null;
+    fileSize?: number | null;
+    tags?: string[] | null;
+    createdAt?: string;
+  } | null>(null);
   const [previewOpened, { open: openPreview, close: closePreview }] = useDisclosure(false);
 
   useEffect(() => {
@@ -64,7 +74,11 @@ export default function DocumentsPage() {
         title: doc.title, 
         content: doc.content,
         fileType: doc.fileType,
-        filePath: doc.filePath
+        filePath: doc.filePath,
+        source: doc.source,
+        fileSize: doc.fileSize,
+        tags: doc.tags,
+        createdAt: doc.createdAt
       });
       openPreview();
     } catch (error) {

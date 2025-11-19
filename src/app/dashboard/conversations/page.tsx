@@ -61,32 +61,49 @@ function parseIdentifier(phoneNumber: string): { channel: string; display: strin
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
 
-  const fetchConversations = useCallback(async () => {
-    setLoading(true);
+  const fetchConversations = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const response = await fetch("/api/conversations");
       const data = await response.json();
-      setConversations(data.conversations || []);
-      if (data.conversations && data.conversations.length > 0 && !selectedConv) {
-        setSelectedConv(data.conversations[0]);
+      const fetchedConversations = data.conversations || [];
+      setConversations(fetchedConversations);
+      
+      // Update selected conversation with fresh data if it exists
+      if (selectedPhoneNumber) {
+        const updatedConv = fetchedConversations.find(
+          (c: Conversation) => c.phoneNumber === selectedPhoneNumber
+        );
+        if (updatedConv) {
+          setSelectedConv(updatedConv);
+        }
+      } else if (fetchedConversations.length > 0) {
+        setSelectedConv(fetchedConversations[0]);
+        setSelectedPhoneNumber(fetchedConversations[0].phoneNumber);
       }
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
       setConversations([]);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
-  }, [selectedConv]);
+  }, [selectedPhoneNumber]);
 
   const handleConversationSelect = (conv: unknown) => {
-    setSelectedConv(conv as Conversation);
+    const newConv = conv as Conversation;
+    setSelectedPhoneNumber(newConv.phoneNumber);
+    setSelectedConv(newConv);
   };
 
   useEffect(() => {
     void fetchConversations();
-  }, [fetchConversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Stack gap="lg">
@@ -97,7 +114,7 @@ export default function ConversationsPage() {
         </Text>
       </div>
 
-      {loading ? (
+      {initialLoad && loading ? (
         <Card withBorder p="xl">
           <Text c="dimmed">Loading conversations...</Text>
         </Card>
@@ -121,7 +138,7 @@ export default function ConversationsPage() {
               messages={selectedConv.messages}
               conversationSentiment={selectedConv.conversationSentiment}
               parseIdentifier={parseIdentifier}
-              onRefresh={fetchConversations}
+              onRefresh={() => fetchConversations(true)}
             />
           )}
         </Group>

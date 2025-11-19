@@ -28,7 +28,8 @@ type DocumentUploadModalProps = {
 
 export function DocumentUploadModal({ opened, onClose, uploadDocument }: DocumentUploadModalProps) {
   const [uploading, setUploading] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
 
   const form = useForm({
     initialValues: {
@@ -37,47 +38,90 @@ export function DocumentUploadModal({ opened, onClose, uploadDocument }: Documen
       content: "",
       tags: [] as string[]
     },
-    validate: zodResolver(schema)
+    validate: batchMode ? undefined : zodResolver(schema)
   });
 
   const handleSubmit = async (values: typeof form.values) => {
     setUploading(true);
     try {
-      let fileData: { file?: string; fileType?: string } = {};
+      if (batchMode && uploadFiles.length > 0) {
+        // Batch upload mode
+        let successCount = 0;
+        for (const file of uploadFiles) {
+          try {
+            const reader = new FileReader();
+            const base64 = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => resolve((reader.result as string).split(",")[1]);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
 
-      if (uploadFile) {
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve((reader.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(uploadFile);
-        });
+            const ext = file.name.split(".").pop()?.toLowerCase();
+            let fileType: "pdf" | "docx" | "txt" | "image" = "txt";
+            
+            if (ext === "pdf") fileType = "pdf";
+            else if (ext === "docx" || ext === "doc") fileType = "docx";
+            else if (["jpg", "jpeg", "png", "gif", "bmp"].includes(ext || "")) fileType = "image";
 
-        const ext = uploadFile.name.split(".").pop()?.toLowerCase();
-        let fileType: "pdf" | "docx" | "txt" | "image" = "txt";
+            await uploadDocument({
+              title: file.name.replace(/\.[^/.]+$/, ""),
+              source: file.name,
+              tags: values.tags || [],
+              file: base64,
+              fileType
+            });
+            successCount++;
+          } catch (error) {
+            console.error(`Failed to upload ${file.name}:`, error);
+          }
+        }
         
-        if (ext === "pdf") fileType = "pdf";
-        else if (ext === "docx" || ext === "doc") fileType = "docx";
-        else if (["jpg", "jpeg", "png", "gif", "bmp"].includes(ext || "")) fileType = "image";
+        notifications.show({
+          title: "Batch Upload Complete",
+          message: `Successfully uploaded ${successCount} of ${uploadFiles.length} files`,
+          color: successCount === uploadFiles.length ? "teal" : "orange"
+        });
+      } else {
+        // Single file/manual upload mode
+        let fileData: { file?: string; fileType?: string } = {};
 
-        fileData = { file: base64, fileType };
+        if (uploadFiles.length > 0) {
+          const uploadFile = uploadFiles[0];
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(uploadFile);
+          });
+
+          const ext = uploadFile.name.split(".").pop()?.toLowerCase();
+          let fileType: "pdf" | "docx" | "txt" | "image" = "txt";
+          
+          if (ext === "pdf") fileType = "pdf";
+          else if (ext === "docx" || ext === "doc") fileType = "docx";
+          else if (["jpg", "jpeg", "png", "gif", "bmp"].includes(ext || "")) fileType = "image";
+
+          fileData = { file: base64, fileType };
+        }
+
+        await uploadDocument({
+          title: values.title,
+          source: values.source,
+          content: values.content || undefined,
+          tags: values.tags || [],
+          ...fileData
+        });
+        
+        notifications.show({
+          title: "Success",
+          message: "Document uploaded successfully",
+          color: "teal"
+        });
       }
-
-      await uploadDocument({
-        title: values.title,
-        source: values.source,
-        content: values.content || undefined,
-        tags: values.tags || [],
-        ...fileData
-      });
       
-      notifications.show({
-        title: "Success",
-        message: "Document uploaded successfully",
-        color: "teal"
-      });
       form.reset();
-      setUploadFile(null);
+      setUploadFiles([]);
+      setBatchMode(false);
       onClose();
     } catch (error) {
       console.error(error);
@@ -95,13 +139,44 @@ export function DocumentUploadModal({ opened, onClose, uploadDocument }: Documen
     <Modal opened={opened} onClose={onClose} title="Add Knowledge Document" size="lg">
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <TextInput label="Title" placeholder="Ordinances 2024" withAsterisk {...form.getInputProps("title")} />
-          <TextInput label="Source" placeholder="ordinances-2024.md" {...form.getInputProps("source")} />
+          {!batchMode && (
+            <>
+              <TextInput label="Title" placeholder="Ordinances 2024" withAsterisk {...form.getInputProps("title")} />
+              <TextInput label="Source" placeholder="ordinances-2024.md" {...form.getInputProps("source")} />
+            </>
+          )}
+          
+          <Group justify="space-between" mb="xs">
+            <Text size="sm" fw={500}>Upload Mode</Text>
+            <Button.Group>
+              <Button 
+                variant={!batchMode ? "filled" : "default"} 
+                size="xs"
+                onClick={() => {
+                  setBatchMode(false);
+                  setUploadFiles([]);
+                }}
+              >
+                Single
+              </Button>
+              <Button 
+                variant={batchMode ? "filled" : "default"} 
+                size="xs"
+                onClick={() => {
+                  setBatchMode(true);
+                  form.reset();
+                }}
+              >
+                Batch
+              </Button>
+            </Button.Group>
+          </Group>
           
           <Dropzone
-            onDrop={(files) => setUploadFile(files[0])}
+            onDrop={(files) => setUploadFiles(batchMode ? files : [files[0]])}
             onReject={() => notifications.show({ title: "Error", message: "Invalid file", color: "red" })}
             maxSize={10 * 1024 ** 2}
+            maxFiles={batchMode ? 20 : 1}
             accept={[MIME_TYPES.pdf, MIME_TYPES.docx, MIME_TYPES.png, MIME_TYPES.jpeg, "text/plain"]}
           >
             <Group justify="center" gap="xl" mih={100} style={{ pointerEvents: "none" }}>
@@ -117,21 +192,41 @@ export function DocumentUploadModal({ opened, onClose, uploadDocument }: Documen
 
               <div>
                 <Text size="xl" inline>
-                  {uploadFile ? uploadFile.name : "Drag file here or click to select"}
+                  {uploadFiles.length > 0 
+                    ? `${uploadFiles.length} file${uploadFiles.length > 1 ? 's' : ''} selected`
+                    : batchMode 
+                      ? "Drag multiple files here or click to select"
+                      : "Drag file here or click to select"}
                 </Text>
                 <Text size="sm" c="dimmed" inline mt={7}>
-                  Supports PDF, DOCX, TXT, and images (PNG, JPG)
+                  {batchMode ? "Up to 20 files: PDF, DOCX, TXT, images" : "Supports PDF, DOCX, TXT, and images (PNG, JPG)"}
                 </Text>
               </div>
             </Group>
           </Dropzone>
           
-          <Textarea
-            label="Content (optional if uploading file)"
-            placeholder="Full text content..."
-            minRows={6}
-            {...form.getInputProps("content")}
-          />
+          {uploadFiles.length > 0 && (
+            <Paper p="sm" withBorder>
+              <Text size="sm" fw={500} mb="xs">Selected Files:</Text>
+              <Stack gap="xs">
+                {uploadFiles.map((file, idx) => (
+                  <Group key={idx} justify="space-between">
+                    <Text size="sm">{file.name}</Text>
+                    <Text size="xs" c="dimmed">{(file.size / 1024).toFixed(1)} KB</Text>
+                  </Group>
+                ))}
+              </Stack>
+            </Paper>
+          )}
+          
+          {!batchMode && (
+            <Textarea
+              label="Content (optional if uploading file)"
+              placeholder="Full text content..."
+              minRows={6}
+              {...form.getInputProps("content")}
+            />
+          )}
           <TagsInput 
             label="Tags" 
             placeholder="Press Enter to add tags" 

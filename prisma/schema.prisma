@@ -69,6 +69,10 @@ model Report {
   sentiment          String?
   sentimentScore     Float?
   sentimentKeywords  Json?
+  
+  // AI-generated recommendations (stored as JSON)
+  recommendations    Json?
+  recommendationsGeneratedAt DateTime?
 }
 
 model Document {

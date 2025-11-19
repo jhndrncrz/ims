@@ -42,14 +42,26 @@ export async function GET(
 
     const recommendations = await recommendationService.generateRecommendations(report);
 
-    logger.info("✅ Recommendations generated successfully", {
+    // Store recommendations in database
+    await prisma.report.update({
+      where: { id },
+      data: {
+        recommendations: recommendations as unknown as Record<string, unknown>,
+        recommendationsGeneratedAt: new Date()
+      }
+    });
+
+    logger.info("✅ Recommendations generated and stored successfully", {
       reportId: id,
       urgencyLevel: recommendations.urgencyLevel,
       recommendationCount: recommendations.recommendations.length,
       actionCount: recommendations.suggestedActions.length
     });
 
-    return NextResponse.json(recommendations);
+    return NextResponse.json({
+      ...recommendations,
+      generatedAt: new Date().toISOString()
+    });
   } catch (error) {
     logger.error("❌ Error generating recommendations", {
       error: error instanceof Error ? error.message : String(error),

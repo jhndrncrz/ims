@@ -262,7 +262,6 @@ export default function SettingsPage() {
       title: success ? "Connection Successful" : "Connection Failed",
       message: success ? `${service.toUpperCase()} is properly configured` : "Please check your credentials",
       color: success ? "teal" : "red",
-      icon: success ? <IconCheck size={16} /> : <IconAlertTriangle size={16} />
     });
     setTestingConnection(false);
   };

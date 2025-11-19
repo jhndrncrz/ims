@@ -29,5 +29,15 @@ export const toReportDTO = (report: Report): ReportDTO => ({
   // Sentiment analysis fields
   sentiment: report.sentiment as ReportSentiment | null,
   sentimentScore: report.sentimentScore,
-  sentimentKeywords: report.sentimentKeywords ? (report.sentimentKeywords as string[]) : null
+  sentimentKeywords: report.sentimentKeywords ? (report.sentimentKeywords as string[]) : null,
+  
+  // AI recommendations
+  recommendations: report.recommendations ? (report.recommendations as {
+    recommendations: string[];
+    urgencyLevel: "IMMEDIATE" | "URGENT" | "MODERATE" | "LOW";
+    suggestedActions: string[];
+    estimatedResolutionTime: string;
+    requiredResources: string[];
+  }) : null,
+  recommendationsGeneratedAt: report.recommendationsGeneratedAt?.toISOString()
 });

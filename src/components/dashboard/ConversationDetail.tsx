@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Button, Card, Collapse, Group, Paper, ScrollArea, Stack, Text, Tooltip } from "@mantine/core";
+import { Accordion, ActionIcon, Badge, Button, Card, Collapse, Group, Paper, ScrollArea, Stack, Text, Tooltip } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconChevronDown, IconChevronUp, IconBrain } from "@tabler/icons-react";
@@ -259,9 +259,9 @@ export function ConversationDetail({ phoneNumber, messageCount, messages, conver
             <Text size="xs" c="dimmed">
               {messageCount} messages
             </Text>
-            {conversationSentiment?.summary && (
-              <Text size="sm" c="dimmed" mt="xs" style={{ fontStyle: "italic" }}>
-                {conversationSentiment.summary}
+            {conversationSentiment?.lastAnalyzedAt && (
+              <Text size="xs" c="dimmed" mt="xs">
+                Last analyzed: {formatDateTime(conversationSentiment.lastAnalyzedAt)}
               </Text>
             )}
           </div>
@@ -279,6 +279,27 @@ export function ConversationDetail({ phoneNumber, messageCount, messages, conver
           )}
         </Group>
       </Card.Section>
+      
+      {conversationSentiment?.summary && (
+        <Card.Section>
+          <Accordion variant="filled">
+            <Accordion.Item value="summary">
+              <Accordion.Control>
+                <Group gap="xs">
+                  <IconBrain size={16} />
+                  <Text size="sm" fw={500}>AI-Generated Summary</Text>
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Text size="sm" c="dimmed" style={{ fontStyle: "italic" }}>
+                  {conversationSentiment.summary}
+                </Text>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+        </Card.Section>
+      )}
+      
       <ScrollArea h={600} p="md">
         <Stack gap="md">
           {messages.map((message) => (

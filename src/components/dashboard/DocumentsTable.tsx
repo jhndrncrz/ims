@@ -247,27 +247,42 @@ export function DocumentsTable({ documents, loading, onPreview, onDelete }: Docu
           title: "Source",
           sortable: true,
           width: 200,
-          render: (doc) => <Text size="sm">{doc.source}</Text>,
+          render: (doc) => (
+            <Text size="sm" c={doc.source ? undefined : "dimmed"} fs={doc.source ? undefined : "italic"}>
+              {doc.source || "Not provided"}
+            </Text>
+          ),
         },
           {
             accessor: "tags",
             title: "Tags",
             width: 250,
-            render: (doc) => (
-              <Group gap="xs">
-                {Array.isArray(doc.tags) &&
-                  doc.tags.slice(0, 3).map((tag) => (
+            render: (doc) => {
+              const hasTags = Array.isArray(doc.tags) && doc.tags.length > 0;
+              
+              if (!hasTags) {
+                return (
+                  <Text size="sm" c="dimmed" fs="italic">
+                    No tags
+                  </Text>
+                );
+              }
+              
+              return (
+                <Group gap="xs">
+                  {doc.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag} size="sm" variant="light">
                       {tag}
                     </Badge>
                   ))}
-                {Array.isArray(doc.tags) && doc.tags.length > 3 && (
-                  <Badge size="sm" variant="light" color="gray">
-                    +{doc.tags.length - 3}
-                  </Badge>
-                )}
-              </Group>
-            ),
+                  {doc.tags.length > 3 && (
+                    <Badge size="sm" variant="light" color="gray">
+                      +{doc.tags.length - 3}
+                    </Badge>
+                  )}
+                </Group>
+              );
+            },
           },
         {
           accessor: "createdAt",

@@ -28,10 +28,33 @@ export class PDFTemplateService {
     // Logo (if exists, otherwise placeholder)
     if (settings.logoPath && fs.existsSync(settings.logoPath)) {
       try {
+        // Save graphics state
+        doc.save();
+        
+        // Create circular clipping path
+        const radius = this.LOGO_PLACEHOLDER_SIZE / 2;
+        const centerX = this.PAGE_MARGIN + radius;
+        const centerY = currentY + radius;
+        
+        doc.circle(centerX, centerY, radius).clip();
+        
+        // Draw image to fill circle (cover mode)
         doc.image(settings.logoPath, this.PAGE_MARGIN, currentY, {
           width: this.LOGO_PLACEHOLDER_SIZE,
           height: this.LOGO_PLACEHOLDER_SIZE,
+          fit: [this.LOGO_PLACEHOLDER_SIZE, this.LOGO_PLACEHOLDER_SIZE],
+          align: 'center',
+          valign: 'center'
         });
+        
+        // Restore graphics state
+        doc.restore();
+        
+        // Draw circle border
+        doc.circle(centerX, centerY, radius)
+          .lineWidth(2)
+          .strokeColor("#cccccc")
+          .stroke();
       } catch {
         this.addLogoPlaceholder(doc, this.PAGE_MARGIN, currentY);
       }

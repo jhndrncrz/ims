@@ -32,6 +32,7 @@ type RecommendationResult = {
   suggestedActions: string[];
   estimatedResolutionTime: string;
   requiredResources: string[];
+  generatedAt?: string;
 };
 
 export function ReportDetailModal({ report, opened, onClose }: ReportDetailModalProps) {
@@ -60,7 +61,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
     }
   });
 
-  // Sync form values when report changes
+  // Sync form values and recommendations when report changes
   useEffect(() => {
     if (report) {
       form.setValues({
@@ -69,6 +70,18 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
         status: report.status,
         resolution: report.resolution || ""
       });
+      
+      // Load stored recommendations if available
+      if (report.recommendations) {
+        setRecommendations({
+          ...report.recommendations,
+          generatedAt: report.recommendationsGeneratedAt || undefined
+        });
+        setShowRecommendations(true); // Automatically show if recommendations exist
+      } else {
+        setRecommendations(null);
+        setShowRecommendations(false);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report?.id]);
@@ -137,8 +150,13 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
   };
 
   const handleGetRecommendations = async () => {
-    if (recommendations) {
-      setShowRecommendations(!showRecommendations);
+    if (recommendations && showRecommendations) {
+      setShowRecommendations(false);
+      return;
+    }
+    
+    if (recommendations && !showRecommendations) {
+      setShowRecommendations(true);
       return;
     }
 
@@ -153,9 +171,8 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
 
       notifications.show({
         title: "Recommendations Generated",
-        message: "AI-powered action plan created",
+        message: "AI-powered action plan created and saved",
         color: "teal",
-        icon: <IconBulb size={16} />
       });
     } catch (error) {
       console.error(error);
@@ -184,7 +201,6 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
           title: "Opening Print Preview",
           message: "Click the print button to save as PDF",
           color: "blue",
-          icon: <IconDownload size={16} />
         });
       } else {
         // JSON - download directly
@@ -206,7 +222,6 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
           title: "Export Successful",
           message: `Report exported as ${format.toUpperCase()}`,
           color: "teal",
-          icon: <IconDownload size={16} />
         });
       }
     } catch (error) {
@@ -533,24 +548,31 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
             <Collapse in={showRecommendations && !!recommendations}>
               {recommendations && (
                 <Stack gap="md" p="md" style={{ backgroundColor: "var(--mantine-color-violet-0)", borderRadius: "var(--mantine-radius-md)" }}>
-                  <Group>
-                    <Badge
-                      color={
-                        recommendations.urgencyLevel === "IMMEDIATE"
-                          ? "red"
-                          : recommendations.urgencyLevel === "URGENT"
-                          ? "orange"
-                          : recommendations.urgencyLevel === "MODERATE"
-                          ? "yellow"
-                          : "green"
-                      }
-                      variant="filled"
-                    >
-                      {recommendations.urgencyLevel}
-                    </Badge>
-                    <Text size="sm" c="dimmed">
-                      Est. Resolution: {recommendations.estimatedResolutionTime}
-                    </Text>
+                  <Group justify="space-between">
+                    <Group>
+                      <Badge
+                        color={
+                          recommendations.urgencyLevel === "IMMEDIATE"
+                            ? "red"
+                            : recommendations.urgencyLevel === "URGENT"
+                            ? "orange"
+                            : recommendations.urgencyLevel === "MODERATE"
+                            ? "yellow"
+                            : "green"
+                        }
+                        variant="filled"
+                      >
+                        {recommendations.urgencyLevel}
+                      </Badge>
+                      <Text size="sm" c="dimmed">
+                        Est. Resolution: {recommendations.estimatedResolutionTime}
+                      </Text>
+                    </Group>
+                    {recommendations.generatedAt && (
+                      <Text size="xs" c="dimmed">
+                        Generated: {formatDateTime(recommendations.generatedAt)}
+                      </Text>
+                    )}
                   </Group>
 
                   <div>
@@ -628,6 +650,19 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
                         : "Show Recommendations"
                       : "Get AI Recommendations"}
                   </Menu.Item>
+                  {recommendations && (
+                    <Menu.Item
+                      leftSection={<IconBulb size={16} />}
+                      onClick={async () => {
+                        setRecommendations(null);
+                        await handleGetRecommendations();
+                      }}
+                      disabled={loadingRecommendations}
+                      color="violet"
+                    >
+                      Regenerate Recommendations
+                    </Menu.Item>
+                  )}
                   <Menu.Item
                     leftSection={<IconBulb size={16} />}
                     onClick={handleAddToKnowledge}
