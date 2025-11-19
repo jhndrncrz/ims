@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
+import { logger } from "@/lib/logger";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -61,7 +62,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       }
     });
   } catch (error) {
-    console.error("Failed to serve file:", error);
+    logger.error("Failed to serve document file", { error });
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 });
   }
 }

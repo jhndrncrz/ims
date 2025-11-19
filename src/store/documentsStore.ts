@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { logger } from "@/lib/logger";
 
 export type DocumentChunk = {
   id: string;
@@ -41,7 +42,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       const data = (await response.json()) as { documents: DocumentChunk[] };
       set({ documents: data.documents || [], loading: false });
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      logger.error("Failed to fetch documents", { error });
       set({ error: "Failed to load documents", loading: false, documents: [] });
     }
   },
@@ -51,7 +52,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       if (!response.ok) throw new Error("Delete failed");
       set({ documents: get().documents.filter((doc) => doc.id !== id) });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to delete document", { documentId: id, error });
       set({ error: "Failed to delete document" });
       throw error;
     }
@@ -66,7 +67,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       if (!response.ok) throw new Error("Upload failed");
       await get().fetchDocuments();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to upload document", { error });
       set({ error: "Failed to upload document" });
       throw error;
     }

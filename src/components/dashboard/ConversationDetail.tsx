@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { formatDateTime } from "@/lib/formatters";
 import { sentimentColors } from "@/constants/conversationConstants";
+import { logger } from "@/lib/logger";
 
 type EnhancedFields = {
   extractedLocation?: string | null;
@@ -212,7 +213,7 @@ export function ConversationDetail({ phoneNumber, messageCount, messages, conver
         onRefresh();
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to analyze conversation sentiment", { phoneNumber, error });
       notifications.show({
         title: "Error",
         message: "Failed to analyze sentiment",

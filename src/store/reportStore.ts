@@ -3,6 +3,7 @@
 import { create } from "zustand";
 
 import type { ReportDTO } from "@/types/report";
+import { logger } from "@/lib/logger";
 
 type ReportInput = {
   phoneNumber: string;
@@ -36,7 +37,7 @@ export const useReportStore = create<ReportsState>((set, get) => ({
       const data = (await response.json()) as { reports: ReportDTO[] };
       set({ reports: data.reports, loading: false });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to fetch reports", { error });
       set({ error: "Failed to load reports", loading: false });
     }
   },
@@ -53,7 +54,7 @@ export const useReportStore = create<ReportsState>((set, get) => ({
       const data = (await response.json()) as { report: ReportDTO };
       set({ reports: [data.report, ...get().reports] });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to create report", { error });
       set({ error: "Unable to create report" });
       throw error;
     }
@@ -71,7 +72,7 @@ export const useReportStore = create<ReportsState>((set, get) => ({
       const data = (await response.json()) as { report: ReportDTO };
       set({ reports: get().reports.map((r) => (r.id === id ? data.report : r)) });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to update report", { reportId: id, error });
       set({ error: "Unable to update report" });
       throw error;
     }

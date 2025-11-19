@@ -5,6 +5,7 @@ import { htmlTemplateService } from "@/lib/templates/htmlTemplates";
 import { jsonExportService } from "@/lib/templates/jsonExporter";
 import { settingsService } from "@/server/services/settingsService";
 import { TemplateType } from "@/types/templates";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _request: NextRequest,
@@ -73,7 +74,7 @@ export async function GET(
       { status: 400 }
     );
   } catch (error) {
-    console.error("Export error:", error);
+    logger.error("Failed to export report", { error });
     return NextResponse.json(
       { error: "Failed to export report" },
       { status: 500 }

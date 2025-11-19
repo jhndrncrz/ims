@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { settingsService } from "@/server/services/settingsService";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
     const settings = await settingsService.getSettings();
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("Get settings error:", error);
+    logger.error("Failed to get settings", { error });
     return NextResponse.json(
       { error: "Failed to fetch settings" },
       { status: 500 }
@@ -20,7 +21,7 @@ export async function PUT(request: NextRequest) {
     const settings = await settingsService.updateSettings(body);
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("Update settings error:", error);
+    logger.error("Failed to update settings", { error });
     return NextResponse.json(
       { error: "Failed to update settings" },
       { status: 500 }

@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mammoth from "mammoth";
 import { createWorker } from "tesseract.js";
-import { PDFParse } from "pdf-parse";
-import * as pdfjsLib from "pdfjs-dist";
-import { createCanvas } from "canvas";
 
 import { vectorStore } from "@/lib/rag/vector-store";
+import { logger } from "@/lib/logger";
 
 const uploadSchema = z.object({
   title: z.string().min(1),
@@ -35,6 +33,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
       case "pdf": {
         // Try text extraction first
         try {
+          const { PDFParse } = await import("pdf-parse");
           const { resolve } = await import("path");
           const workerPath = resolve(process.cwd(), 'node_modules/pdf-parse/dist/worker/pdf.worker.mjs');
           PDFParse.setWorker(workerPath);
@@ -45,23 +44,27 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
           
           // If text extraction yields substantial content, use it
           if (result.text && result.text.trim().length > 50) {
-            console.log(`📄 PDF extracted: ${result.pages.length} pages, ${result.text.length} chars`);
+            logger.info(`PDF extracted: ${result.pages.length} pages, ${result.text.length} chars`);
             return result.text;
           }
           
-          console.log("⚠️ PDF has minimal text, falling back to OCR...");
+          logger.info("PDF has minimal text, falling back to OCR");
         } catch (textError) {
-          console.log("⚠️ PDF text extraction failed, falling back to OCR:", textError);
+          logger.warn("PDF text extraction failed, falling back to OCR", { error: textError });
         }
         
         // Fall back to OCR for image-based PDFs - convert to images first
-        console.log("🖼️ Converting PDF to images for OCR...");
+        logger.info("Converting PDF to images for OCR");
+        
+        // Dynamic imports for canvas and pdfjs-dist to avoid Node.js build issues
+        const pdfjsLib = await import("pdfjs-dist");
+        const { createCanvas } = await import("canvas");
         
         // Load PDF document
         const loadingTask = pdfjsLib.getDocument({ data: buffer });
         const pdfDoc = await loadingTask.promise;
         const numPages = pdfDoc.numPages;
-        console.log(`📄 PDF has ${numPages} pages`);
+        logger.info(`PDF has ${numPages} pages`);
         
         const worker = await createWorker('eng');
         const allText: string[] = [];
@@ -69,7 +72,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
         try {
           // Process each page
           for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-            console.log(`📖 Processing page ${pageNum}/${numPages}...`);
+            logger.debug(`Processing PDF page ${pageNum}/${numPages}`);
             
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
@@ -94,7 +97,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
             
             if (text && text.trim().length > 0) {
               allText.push(text.trim());
-              console.log(`✅ Page ${pageNum}: ${text.trim().length} chars extracted`);
+              logger.debug(`Page ${pageNum} extracted ${text.trim().length} chars`);
             }
           }
           
@@ -104,7 +107,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
             throw new Error("PDF contains no recognizable text even after OCR");
           }
           
-          console.log(`🔍 Total PDF OCR extracted: ${combinedText.length} chars from ${numPages} pages`);
+          logger.info(`Total PDF OCR extracted: ${combinedText.length} chars from ${numPages} pages`);
           return combinedText;
         } finally {
           await worker.terminate();
@@ -117,22 +120,22 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
           const result = await mammoth.extractRawText({ buffer });
           
           if (result.messages.length > 0) {
-            console.warn("⚠️ DOCX extraction warnings:", result.messages);
+            logger.warn("DOCX extraction warnings", { messages: result.messages });
           }
           
           // If text extraction yields substantial content, use it
           if (result.value && result.value.trim().length > 50) {
-            console.log(`📝 DOCX extracted: ${result.value.length} chars`);
+            logger.info(`DOCX extracted: ${result.value.length} chars`);
             return result.value;
           }
           
-          console.log("⚠️ DOCX has minimal text, falling back to OCR...");
+          logger.info("DOCX has minimal text, falling back to OCR");
         } catch (textError) {
-          console.log("⚠️ DOCX text extraction failed, falling back to OCR:", textError);
+          logger.warn("DOCX text extraction failed, falling back to OCR", { error: textError });
         }
         
         // Fall back to OCR for image-based or corrupted DOCX
-        console.log("🖼️ Starting OCR on DOCX...");
+        logger.info("Starting OCR on DOCX");
         const worker = await createWorker('eng');
         try {
           const { data: { text } } = await worker.recognize(buffer);
@@ -141,7 +144,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
             throw new Error("DOCX contains no recognizable text even after OCR");
           }
           
-          console.log(`🔍 DOCX OCR extracted: ${text.length} chars`);
+          logger.info(`DOCX OCR extracted: ${text.length} chars`);
           return text;
         } finally {
           await worker.terminate();
@@ -150,7 +153,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
 
       case "image": {
         // Use Tesseract.js for OCR on images
-        console.log("🖼️ Starting OCR on image...");
+        logger.info("Starting OCR on image");
         
         const worker = await createWorker('eng');
         try {
@@ -160,7 +163,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
             throw new Error("Image contains no recognizable text");
           }
           
-          console.log(`🔍 OCR extracted: ${text.length} chars`);
+          logger.info(`OCR extracted: ${text.length} chars`);
           return text;
         } finally {
           await worker.terminate();
@@ -171,7 +174,7 @@ async function extractTextFromFile(base64File: string, fileType: string): Promis
         throw new Error(`Unsupported file type: ${fileType}`);
     }
   } catch (error) {
-    console.error(`❌ Text extraction failed for ${fileType}:`, error);
+    logger.error(`Text extraction failed for ${fileType}`, { error });
     throw new Error(`Failed to extract text from ${fileType}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -234,7 +237,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid input", issues: error.issues }, { status: 400 });
     }
-    console.error("Upload error:", error);
+    logger.error("Upload error", { error });
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

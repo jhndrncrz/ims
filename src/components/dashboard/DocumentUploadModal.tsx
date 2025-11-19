@@ -5,6 +5,7 @@ import { notifications } from "@mantine/notifications";
 import { IconUpload, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -72,7 +73,7 @@ export function DocumentUploadModal({ opened, onClose, uploadDocument }: Documen
             });
             successCount++;
           } catch (error) {
-            console.error(`Failed to upload ${file.name}:`, error);
+            logger.error("Failed to upload document in batch", { fileName: file.name, error });
           }
         }
         
@@ -124,7 +125,7 @@ export function DocumentUploadModal({ opened, onClose, uploadDocument }: Documen
       setBatchMode(false);
       onClose();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to upload document", { error });
       notifications.show({
         title: "Error",
         message: "Failed to upload document",

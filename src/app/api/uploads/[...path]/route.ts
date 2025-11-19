@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/uploads/[...path]
@@ -69,7 +70,7 @@ export async function GET(
       }
     });
   } catch (error) {
-    console.error("Error serving file:", error);
+    logger.error("Failed to serve uploaded file", { error });
     return NextResponse.json(
       { error: "Failed to serve file" },
       { status: 500 }

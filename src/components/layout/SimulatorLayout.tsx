@@ -3,6 +3,7 @@
 import { BarangaySettings } from "@/types/templates";
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { logger } from "@/lib/logger";
 import {
   IconMessage
 } from "@tabler/icons-react";
@@ -32,7 +33,7 @@ export function SimulatorLayout({ children }: SimulatorLayoutProps) {
           setSettings(data);
         }
       } catch (error) {
-        console.error("Failed to fetch settings:", error);
+        logger.error("Failed to fetch settings in simulator layout", { error });
       }
     }
     void fetchSettings();

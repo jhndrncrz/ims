@@ -3,6 +3,7 @@
 import { BarangaySettings } from "@/types/templates";
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { logger } from "@/lib/logger";
 import {
   IconChartBar,
   IconFileText,
@@ -40,7 +41,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           setSettings(data);
         }
       } catch (error) {
-        console.error("Failed to fetch settings:", error);
+        logger.error("Failed to fetch settings in dashboard layout", { error });
       }
     }
     void fetchSettings();

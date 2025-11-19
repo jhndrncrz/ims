@@ -4,6 +4,7 @@ import { z } from "zod";
 import { toReportDTO } from "@/lib/mappers";
 import { reportService } from "@/server/services/reportService";
 import { vectorStore } from "@/lib/rag/vector-store";
+import { logger } from "@/lib/logger";
 
 const updateSchema = z.object({
   status: z.enum(["OPEN", "ACKNOWLEDGED", "CLOSED"]).optional(),
@@ -68,7 +69,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid input", issues: error.issues }, { status: 400 });
     }
-    console.error("Update error:", error);
+    logger.error("Failed to update report", { error });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { recommendationService } from "@/lib/ai/recommendationService";
 import { logger } from "@/lib/logger";
@@ -46,7 +47,7 @@ export async function GET(
     await prisma.report.update({
       where: { id },
       data: {
-        recommendations: recommendations as any,
+        recommendations: recommendations as unknown as Prisma.InputJsonValue,
         recommendationsGeneratedAt: new Date()
       }
     });

@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const fetchReports = useReportStore((state) => state.fetchReports);
   const [selectedReport, setSelectedReport] = useState<ReportDTO | null>(null);
   const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure(false);
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null]);
 
   useEffect(() => {
     void fetchReports();
@@ -115,7 +115,7 @@ export default function DashboardPage() {
                 type="range"
                 placeholder="Select date range"
                 value={dateRange}
-                onChange={setDateRange}
+                onChange={(value) => setDateRange(value)}
                 leftSection={<IconCalendar size={16} />}
                 clearable
                 style={{ minWidth: 280 }}

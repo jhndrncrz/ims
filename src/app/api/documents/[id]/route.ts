@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
+import { logger } from "@/lib/logger";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       createdAt: document.createdAt.toISOString()
     });
   } catch (error) {
-    console.error("Failed to fetch document:", error);
+    logger.error("Failed to fetch document", { error });
     return NextResponse.json({ error: "Failed to fetch document" }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconArrowLeft, IconSend, IconSignal2g, IconWifi, IconBattery3 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
 
 type Message = {
   id: string;
@@ -84,7 +85,7 @@ export default function SmsSimulatorPage() {
 
       setMessages(prev => [...prev, barangayMessage]);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to send message in simulator", { error });
       notifications.show({
         title: "Error",
         message: "Failed to send message",

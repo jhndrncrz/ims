@@ -40,6 +40,7 @@ import {
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useState, useEffect } from "react";
+import { logger } from "@/lib/logger";
 
 interface BarangaySettings {
   barangayName: string;
@@ -144,7 +145,7 @@ export default function SettingsPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch settings:", error);
+      logger.error("Failed to fetch settings in settings page", { error });
     }
   };
 

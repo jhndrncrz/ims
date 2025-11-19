@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { messageService } from "@/server/services/messageService";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sentiment: result });
   } catch (error) {
-    console.error("Failed to analyze conversation sentiment:", error);
+    logger.error("Failed to analyze conversation sentiment", { error });
     return NextResponse.json({ error: "Failed to analyze sentiment" }, { status: 500 });
   }
 }

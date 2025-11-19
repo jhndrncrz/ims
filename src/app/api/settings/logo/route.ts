@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { settingsService } from "@/server/services/settingsService";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("Logo upload error:", error);
+    logger.error("Failed to upload logo", { error });
     return NextResponse.json(
       { error: "Failed to upload logo" },
       { status: 500 }
@@ -44,7 +45,7 @@ export async function DELETE() {
     const settings = await settingsService.removeLogo();
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("Logo deletion error:", error);
+    logger.error("Failed to delete logo", { error });
     return NextResponse.json(
       { error: "Failed to delete logo" },
       { status: 500 }

@@ -1,12 +1,13 @@
-import { MessageDirection } from "@prisma/client";
+import { MessageDirection, ChannelType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
 import { analyzeSentiment } from "@/lib/ai/sentimentAnalyzer";
+import { logger } from "@/lib/logger";
 
 export const messageService = {
   log: async (input: { 
     direction: MessageDirection; 
-    channel: string; 
+    channel: ChannelType | string; 
     phoneNumber: string; 
     email?: string; 
     messengerId?: string; 
@@ -17,14 +18,13 @@ export const messageService = {
     return prisma.messageLog.create({
       data: {
         direction: input.direction,
-        channel: input.channel as any,
+        channel: input.channel as import("@prisma/client").ChannelType,
         phoneNumber: input.phoneNumber,
         email: input.email,
         messengerId: input.messengerId,
         body: input.body,
         responseId: input.responseId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        metadata: input.metadata as any
+        metadata: input.metadata ? (input.metadata as Prisma.InputJsonValue) : undefined
       }
     });
   },
@@ -56,8 +56,11 @@ export const messageService = {
         
         // Get report IDs from metadata
         const reportIds = sorted
-          .map(msg => (msg.metadata as any)?.reportId)
-          .filter(Boolean) as string[];
+          .map(msg => {
+            const metadata = msg.metadata as { reportId?: string } | null;
+            return metadata?.reportId;
+          })
+          .filter((id): id is string => Boolean(id));
         
         // Fetch associated reports with enhanced fields
         const reports = reportIds.length > 0 
@@ -158,7 +161,7 @@ export const messageService = {
         summary = completion.choices[0]?.message?.content?.trim() || null;
       }
     } catch (error) {
-      console.error("Failed to generate conversation summary:", error);
+      logger.error("Failed to generate conversation summary", { error });
       // Continue without summary
     }
 
@@ -169,14 +172,14 @@ export const messageService = {
         phoneNumber,
         sentiment: result.sentiment,
         sentimentScore: result.score,
-        sentimentKeywords: result.keywords as any,
+        sentimentKeywords: result.keywords as Prisma.InputJsonValue,
         summary,
         messageCount: inboundMessages.length
       },
       update: {
         sentiment: result.sentiment,
         sentimentScore: result.score,
-        sentimentKeywords: result.keywords as any,
+        sentimentKeywords: result.keywords as Prisma.InputJsonValue,
         summary,
         messageCount: inboundMessages.length,
         lastAnalyzedAt: new Date()

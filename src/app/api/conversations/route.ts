@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { messageService } from "@/server/services/messageService";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -16,7 +17,8 @@ export async function GET() {
           createdAt: conv.lastMessage.createdAt.toISOString()
         },
         messages: conv.messages.map(msg => {
-          const reportId = (msg.metadata as any)?.reportId;
+          const metadata = msg.metadata as { reportId?: string } | null;
+          const reportId = metadata?.reportId;
           const report = reportId ? conv.reports.get(reportId) : null;
           
           return {
@@ -44,10 +46,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error("Failed to fetch conversations:", error);
-    return NextResponse.json({ 
-      error: "Failed to fetch conversations",
-      conversations: [] 
-    }, { status: 500 });
+    logger.error("Failed to fetch conversations", { error });
+    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
   }
 }

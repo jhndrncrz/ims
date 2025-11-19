@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ConversationList } from "@/components/dashboard/ConversationList";
 import { ConversationDetail } from "@/components/dashboard/ConversationDetail";
+import { logger } from "@/lib/logger";
 
 type EnhancedFields = {
   extractedLocation?: string | null;
@@ -86,7 +87,7 @@ export default function ConversationsPage() {
         setSelectedPhoneNumber(fetchedConversations[0].phoneNumber);
       }
     } catch (error) {
-      console.error("Failed to fetch conversations:", error);
+      logger.error("Failed to fetch conversations", { error });
       setConversations([]);
     } finally {
       setLoading(false);

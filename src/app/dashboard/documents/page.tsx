@@ -5,6 +5,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconPlus, IconBook, IconReportSearch } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 import { useDocumentsStore } from "@/store/documentsStore";
 import { useReportStore } from "@/store/reportStore";
@@ -55,7 +56,7 @@ export default function DocumentsPage() {
         color: "teal"
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to delete document from page", { documentId: id, error });
       notifications.show({
         title: "Error",
         message: "Failed to delete document",
@@ -82,7 +83,7 @@ export default function DocumentsPage() {
       });
       openPreview();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to load document preview", { documentId: docId, error });
       notifications.show({
         title: "Error",
         message: "Failed to load document preview",

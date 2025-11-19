@@ -3,6 +3,7 @@ import { useForm, zodResolver } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useCallback, useState } from "react";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const manualReportSchema = z.object({
   phoneNumber: z.string().min(10, "Enter a valid PH number"),
@@ -47,7 +48,7 @@ export function ManualReportModal({ opened, onClose, onSuccess, createReport }: 
         onClose();
         onSuccess();
       } catch (error) {
-        console.error(error);
+        logger.error("Failed to create manual report", { error });
         notifications.show({
           title: "Failed to save",
           message: "Please try again",

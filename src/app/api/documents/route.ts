@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { logger } from "@/lib/logger";
 import { prisma } from "@/server/db/client";
 
 export async function GET() {
@@ -21,8 +22,8 @@ export async function GET() {
 
     return NextResponse.json({ documents });
   } catch (error) {
-    console.error("Failed to fetch documents:", error);
-    return NextResponse.json({ error: "Failed to fetch documents", documents: [] }, { status: 500 });
+    logger.error("Failed to fetch documents", { error });
+    return NextResponse.json({ error: "Failed to fetch documents" }, { status: 500 });
   }
 }
 
@@ -58,7 +59,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete error:", error);
+    logger.error("Failed to delete document", { error });
     return NextResponse.json({ error: "Failed to delete document" }, { status: 500 });
   }
 }

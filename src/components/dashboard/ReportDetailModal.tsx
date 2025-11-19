@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/formatters";
 import { useReportStore } from "@/store/reportStore";
 import type { ReportDTO } from "@/types/report";
 import { ReportCategory } from "@prisma/client";
+import { logger } from "@/lib/logger";
 import {
   categoryColors,
   categoryIcons,
@@ -104,7 +105,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
       });
       onClose();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to update report", { reportId: report.id, error });
       notifications.show({
         title: "Error",
         message: "Failed to update report",
@@ -138,7 +139,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
       });
       onClose();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to add to knowledge base", { reportId: report.id, error });
       notifications.show({
         title: "Error",
         message: "Failed to add to knowledge base",
@@ -175,7 +176,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
         color: "teal",
       });
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to generate recommendations", { reportId: report.id, error });
       notifications.show({
         title: "Failed to Generate Recommendations",
         message: "Could not create recommendations",
@@ -225,7 +226,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
         });
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to export report", { reportId: report.id, error });
       notifications.show({
         title: "Export Failed",
         message: "Could not export report",
