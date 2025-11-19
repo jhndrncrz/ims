@@ -1,4 +1,4 @@
-import { Button, Group, Modal, Stack, TagsInput, Text, Textarea, TextInput } from "@mantine/core";
+import { Button, Group, Modal, Paper, Stack, TagsInput, Text, Textarea, TextInput } from "@mantine/core";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
 import { useForm, zodResolver } from "@mantine/form";
 import { notifications } from "@mantine/notifications";

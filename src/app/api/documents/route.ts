@@ -50,9 +50,11 @@ export async function DELETE(request: NextRequest) {
     await prisma.document.delete({ where: { id } });
     
     // Also delete associated chunks from vector store
-    await prisma.documentChunk.deleteMany({ 
-      where: { source: document?.source } 
-    });
+    if (document?.source) {
+      await prisma.documentChunk.deleteMany({ 
+        where: { source: document.source } 
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

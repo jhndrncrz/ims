@@ -46,7 +46,7 @@ export async function GET(
     await prisma.report.update({
       where: { id },
       data: {
-        recommendations: recommendations as unknown as Record<string, unknown>,
+        recommendations: recommendations as any,
         recommendationsGeneratedAt: new Date()
       }
     });
