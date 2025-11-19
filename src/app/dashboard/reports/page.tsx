@@ -1,55 +1,15 @@
 "use client";
 
-import { Badge, Button, Card, Group, Modal, ScrollArea, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Button, Group, Stack, Text, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useForm, zodResolver } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
-import { IconBuildingBridge, IconFlame, IconFileText, IconQuestionMark, IconAlertTriangle, IconClock, IconCheck, IconPlus } from "@tabler/icons-react";
-import { useEffect, useState, createElement, useCallback } from "react";
-import { z } from "zod";
+import { IconPlus } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 
-import { formatDateTime } from "@/lib/formatters";
 import { useReportStore } from "@/store/reportStore";
 import type { ReportDTO } from "@/types/report";
 import { ReportDetailModal } from "@/components/dashboard/ReportDetailModal";
-
-const manualReportSchema = z.object({
-  phoneNumber: z.string().min(10, "Enter a valid PH number"),
-  message: z.string().min(10, "Share more details"),
-  attachmentsUri: z.string().url("Must be a valid URL").optional().or(z.literal(""))
-});
-
-const categoryColors: Record<ReportDTO["category"], string> = {
-  INFRASTRUCTURE: "indigo",
-  DISASTER: "red",
-  ADMIN: "orange",
-  OTHER: "gray"
-};
-
-const categoryIcons: Record<ReportDTO["category"], React.ComponentType<{ size?: number }>> = {
-  INFRASTRUCTURE: IconBuildingBridge,
-  DISASTER: IconFlame,
-  ADMIN: IconFileText,
-  OTHER: IconQuestionMark
-};
-
-const priorityColors: Record<ReportDTO["priority"], string> = {
-  HIGH: "red",
-  MEDIUM: "yellow",
-  LOW: "green"
-};
-
-const statusColors: Record<ReportDTO["status"], string> = {
-  OPEN: "blue",
-  ACKNOWLEDGED: "yellow",
-  CLOSED: "teal"
-};
-
-const statusIcons: Record<ReportDTO["status"], React.ComponentType<{ size?: number }>> = {
-  OPEN: IconAlertTriangle,
-  ACKNOWLEDGED: IconClock,
-  CLOSED: IconCheck
-};
+import { ReportsTable } from "@/components/dashboard/ReportsTable";
+import { ManualReportModal } from "@/components/dashboard/ManualReportModal";
 
 export default function ReportsPage() {
   const reports = useReportStore((state) => state.reports);
@@ -59,16 +19,6 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<ReportDTO | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const [manualEntryOpened, manualEntryHandlers] = useDisclosure(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const manualForm = useForm({
-    initialValues: {
-      phoneNumber: "",
-      message: "",
-      attachmentsUri: ""
-    },
-    validate: zodResolver(manualReportSchema)
-  });
 
   useEffect(() => {
     void fetchReports();
@@ -84,36 +34,9 @@ export default function ReportsPage() {
     setSelectedReport(null);
   };
 
-  const handleManualSubmit = useCallback(
-    async (values: typeof manualForm.values) => {
-      setSubmitting(true);
-      try {
-        await createReport({
-          phoneNumber: values.phoneNumber,
-          message: values.message,
-          attachmentsUri: values.attachmentsUri || undefined
-        });
-        notifications.show({
-          title: "Report saved",
-          message: "Manual report has been logged successfully.",
-          color: "teal"
-        });
-        manualForm.reset();
-        manualEntryHandlers.close();
-        void fetchReports();
-      } catch (error) {
-        console.error(error);
-        notifications.show({
-          title: "Failed to save",
-          message: "Please try again",
-          color: "red"
-        });
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [createReport, manualForm, manualEntryHandlers, fetchReports]
-  );
+  const handleManualReportSuccess = () => {
+    void fetchReports();
+  };
 
   return (
     <Stack gap="lg">
@@ -129,123 +52,20 @@ export default function ReportsPage() {
         </Button>
       </Group>
 
-      <Card withBorder shadow="sm">
-        <ScrollArea>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Phone</Table.Th>
-                <Table.Th>Message</Table.Th>
-                <Table.Th>Category</Table.Th>
-                <Table.Th>Priority</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th>Received</Table.Th>
-                <Table.Th>Actions</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {loading && (
-                <Table.Tr>
-                  <Table.Td colSpan={7}>
-                    <Text size="sm" c="dimmed">
-                      Loading reports...
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-              {!loading && reports.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={7}>
-                    <Text size="sm" c="dimmed">
-                      No reports yet.
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-              {reports.map((report) => (
-                <Table.Tr key={report.id}>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>
-                      {report.phoneNumber}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={2}>
-                      {report.message}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={categoryColors[report.category]} size="sm" leftSection={createElement(categoryIcons[report.category], { size: 12 })}>
-                      {report.category}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={priorityColors[report.priority]} size="sm" variant="dot">
-                      {report.priority}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={statusColors[report.status]} size="sm" leftSection={createElement(statusIcons[report.status], { size: 12 })}>
-                      {report.status}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{formatDateTime(report.createdAt)}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Button size="xs" variant="light" onClick={() => handleRowClick(report)}>
-                      View
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
-      </Card>
+      <ReportsTable
+        reports={reports}
+        loading={loading}
+        onRowClick={handleRowClick}
+      />
 
       <ReportDetailModal report={selectedReport} opened={opened} onClose={handleClose} />
 
-      <Modal
+      <ManualReportModal
         opened={manualEntryOpened}
         onClose={manualEntryHandlers.close}
-        title="Manual Report Entry"
-        size="lg"
-      >
-        <Text size="sm" c="dimmed" mb="md">
-          Create a report directly without receiving an SMS. Useful for walk-in reports or phone calls.
-        </Text>
-        <form onSubmit={manualForm.onSubmit(handleManualSubmit)}>
-          <Stack>
-            <TextInput
-              label="Phone number"
-              placeholder="09171234567"
-              withAsterisk
-              {...manualForm.getInputProps("phoneNumber")}
-            />
-            <Textarea
-              label="Message"
-              placeholder="Broken streetlight near Barangay Hall"
-              minRows={4}
-              withAsterisk
-              {...manualForm.getInputProps("message")}
-            />
-            <TextInput
-              label="Attachment link (optional)"
-              placeholder="https://drive.google.com/..."
-              {...manualForm.getInputProps("attachmentsUri")}
-            />
-            <Group justify="flex-end" mt="md">
-              <Button variant="subtle" onClick={manualEntryHandlers.close} disabled={submitting}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={submitting} disabled={submitting}>
-                Save Report
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
+        onSuccess={handleManualReportSuccess}
+        createReport={createReport}
+      />
     </Stack>
   );
 }

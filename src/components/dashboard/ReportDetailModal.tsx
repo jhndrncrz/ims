@@ -9,6 +9,7 @@ import { createElement, useState } from "react";
 import { formatDateTime } from "@/lib/formatters";
 import { useReportStore } from "@/store/reportStore";
 import type { ReportDTO } from "@/types/report";
+import { ReportCategory } from "@prisma/client";
 
 type ReportDetailModalProps = {
   report: ReportDTO | null;
@@ -192,7 +193,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
               <Combobox
                 store={categoryCombobox}
                 onOptionSubmit={(val) => {
-                  form.setFieldValue("category", val);
+                  form.setFieldValue("category", val as ReportCategory);
                   categoryCombobox.closeDropdown();
                 }}
               >
@@ -236,7 +237,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
               <Combobox
                 store={priorityCombobox}
                 onOptionSubmit={(val) => {
-                  form.setFieldValue("priority", val);
+                  form.setFieldValue("priority", val as ReportDTO["priority"]);
                   priorityCombobox.closeDropdown();
                 }}
               >
@@ -280,7 +281,7 @@ export function ReportDetailModal({ report, opened, onClose }: ReportDetailModal
               <Combobox
                 store={statusCombobox}
                 onOptionSubmit={(val) => {
-                  form.setFieldValue("status", val);
+                  form.setFieldValue("status", val as ReportDTO["status"]);
                   statusCombobox.closeDropdown();
                 }}
               >

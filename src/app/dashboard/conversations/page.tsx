@@ -1,10 +1,10 @@
 "use client";
 
-import { Badge, Card, Group, Paper, ScrollArea, Stack, Text, Title } from "@mantine/core";
+import { Card, Group, Stack, Text, Title } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
-import { IconChevronRight } from "@tabler/icons-react";
 
-import { formatDateTime } from "@/lib/formatters";
+import { ConversationList } from "@/components/dashboard/ConversationList";
+import { ConversationDetail } from "@/components/dashboard/ConversationDetail";
 
 type Message = {
   id: string;
@@ -57,6 +57,10 @@ export default function ConversationsPage() {
     }
   }, [selectedConv]);
 
+  const handleConversationSelect = (conv: unknown) => {
+    setSelectedConv(conv as Conversation);
+  };
+
   useEffect(() => {
     void fetchConversations();
   }, [fetchConversations]);
@@ -80,109 +84,20 @@ export default function ConversationsPage() {
         </Card>
       ) : (
         <Group align="flex-start" gap="md" wrap="nowrap">
-          {/* Conversations List */}
-          <Card withBorder shadow="sm" style={{ flex: "0 0 320px" }}>
-            <Card.Section inheritPadding py="sm" withBorder>
-              <Text fw={600}>All Conversations ({conversations.length})</Text>
-            </Card.Section>
-            <ScrollArea h={600}>
-              <Stack gap="xs" p="xs">
-                {conversations.map((conv) => (
-                  <Paper
-                    key={conv.phoneNumber}
-                    p="md"
-                    withBorder
-                    style={{
-                      cursor: "pointer",
-                      backgroundColor: selectedConv?.phoneNumber === conv.phoneNumber ? "var(--mantine-color-gray-1)" : undefined
-                    }}
-                    onClick={() => setSelectedConv(conv)}
-                  >
-                    <Group justify="space-between" wrap="nowrap">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Group gap="xs" mb={4}>
-                          <Badge size="xs" color={parseIdentifier(conv.phoneNumber).color}>
-                            {parseIdentifier(conv.phoneNumber).channel}
-                          </Badge>
-                        </Group>
-                        <Text fw={600} size="sm">
-                          {parseIdentifier(conv.phoneNumber).display}
-                        </Text>
-                        <Text size="xs" c="dimmed" lineClamp={1}>
-                          {conv.lastMessage.body}
-                        </Text>
-                      </div>
-                      <div>
-                        <Badge size="sm" color="gray">
-                          {conv.messageCount}
-                        </Badge>
-                        <IconChevronRight size={16} />
-                      </div>
-                    </Group>
-                  </Paper>
-                ))}
-              </Stack>
-            </ScrollArea>
-          </Card>
+          <ConversationList
+            conversations={conversations}
+            selectedPhoneNumber={selectedConv?.phoneNumber || null}
+            onSelect={handleConversationSelect}
+            parseIdentifier={parseIdentifier}
+          />
 
-          {/* Conversation Detail */}
           {selectedConv && (
-            <Card withBorder shadow="sm" style={{ flex: 1 }}>
-              <Card.Section inheritPadding py="sm" withBorder>
-                <Group justify="space-between">
-                  <div>
-                    <Group gap="xs" mb={4}>
-                      <Badge size="sm" color={parseIdentifier(selectedConv.phoneNumber).color}>
-                        {parseIdentifier(selectedConv.phoneNumber).channel}
-                      </Badge>
-                    </Group>
-                    <Text fw={600}>{parseIdentifier(selectedConv.phoneNumber).display}</Text>
-                    <Text size="xs" c="dimmed">
-                      {selectedConv.messageCount} messages
-                    </Text>
-                  </div>
-                </Group>
-              </Card.Section>
-              <ScrollArea h={600} p="md">
-                <Stack gap="md">
-                  {selectedConv.messages.map((message) => (
-                    <Paper
-                      key={message.id}
-                      p="md"
-                      withBorder
-                      style={{
-                        backgroundColor: message.direction === "INBOUND" 
-                          ? "var(--mantine-color-blue-0)" 
-                          : "var(--mantine-color-gray-0)",
-                        marginLeft: message.direction === "OUTBOUND" ? "auto" : undefined,
-                        marginRight: message.direction === "INBOUND" ? "auto" : undefined,
-                        maxWidth: "80%"
-                      }}
-                    >
-                      <Group justify="space-between" mb="xs">
-                        <Badge 
-                          size="xs" 
-                          color={message.direction === "INBOUND" ? "blue" : "green"}
-                        >
-                          {message.direction}
-                        </Badge>
-                        <Text size="xs" c="dimmed">
-                          {formatDateTime(message.createdAt)}
-                        </Text>
-                      </Group>
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                        {message.body}
-                      </Text>
-                      {message.metadata && "confidence" in message.metadata && (
-                        <Text size="xs" c="dimmed" mt="xs">
-                          Confidence: {((message.metadata.confidence as number) * 100).toFixed(0)}%
-                        </Text>
-                      )}
-                    </Paper>
-                  ))}
-                </Stack>
-              </ScrollArea>
-            </Card>
+            <ConversationDetail
+              phoneNumber={selectedConv.phoneNumber}
+              messageCount={selectedConv.messageCount}
+              messages={selectedConv.messages}
+              parseIdentifier={parseIdentifier}
+            />
           )}
         </Group>
       )}

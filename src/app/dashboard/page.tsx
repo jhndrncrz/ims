@@ -1,12 +1,15 @@
 "use client";
 
-import { Card, Grid, Group, Paper, SimpleGrid, Stack, Text, Title, Progress, ThemeIcon, Button, Badge, Alert } from "@mantine/core";
+import { Card, Grid, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { AreaChart, BarChart } from "@mantine/charts";
-import { IconAlertTriangle, IconChecks, IconClock, IconReport, IconTrendingUp, IconUsers, IconBell, IconArrowRight, IconInfoCircle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChecks, IconClock, IconReport, IconTrendingUp, IconUsers } from "@tabler/icons-react";
 import { useEffect } from "react";
-import Link from "next/link";
 
 import { useReportStore } from "@/store/reportStore";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { SystemInsights } from "@/components/dashboard/SystemInsights";
+import { MetricCard } from "@/components/dashboard/MetricCard";
 
 export default function DashboardPage() {
   const reports = useReportStore((state) => state.reports);
@@ -69,127 +72,39 @@ export default function DashboardPage() {
         <StatCard icon={IconChecks} label="Closed" value={stats.closed} color="teal" />
       </SimpleGrid>
 
-      <Card withBorder shadow="sm">
-          <Group justify="space-between" mb="md">
-            <Text fw={600} size="sm">Quick Actions</Text>
-          </Group>
-          <Stack gap="xs">
-            <Button 
-              component={Link} 
-              href="/dashboard/reports" 
-              variant="light" 
-              leftSection={<IconBell size={16} />}
-              rightSection={<IconArrowRight size={16} />}
-              fullWidth
-              justify="space-between"
-            >
-              View {stats.open} Open Reports
-            </Button>
-            <Button 
-              component={Link} 
-              href="/dashboard/conversations" 
-              variant="light" 
-              color="violet"
-              leftSection={<IconUsers size={16} />}
-              rightSection={<IconArrowRight size={16} />}
-              fullWidth
-              justify="space-between"
-            >
-              Check Conversations
-            </Button>
-          </Stack>
-        </Card>
+      <QuickActions openReportsCount={stats.open} />
 
-      {/* Quick Actions and Alerts */}
       <SimpleGrid cols={{ base: 1, md: 1 }}>
-        <Card withBorder shadow="sm">
-          <Group justify="space-between" mb="md">
-            <Text fw={600} size="sm">System Insights</Text>
-          </Group>
-          <Stack gap="md">
-            {stats.open > 5 && (
-              <Alert icon={<IconAlertTriangle size={16} />} color="orange" variant="light">
-                <Text size="sm" fw={500}>High Open Reports</Text>
-                <Text size="xs" c="dimmed">You have {stats.open} open reports. Consider addressing high-priority items.</Text>
-              </Alert>
-            )}
-            {avgConfidence < 50 && reports.filter(r => r.confidence).length > 0 && (
-              <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
-                <Text size="sm" fw={500}>Low AI Confidence</Text>
-                <Text size="xs" c="dimmed">Average confidence is {avgConfidence.toFixed(0)}%. Add more documents to improve accuracy.</Text>
-              </Alert>
-            )}
-            {resolutionRate < 30 && stats.total > 0 && (
-              <Alert icon={<IconInfoCircle size={16} />} color="yellow" variant="light">
-                <Text size="sm" fw={500}>Low Resolution Rate</Text>
-                <Text size="xs" c="dimmed">Only {resolutionRate.toFixed(0)}% of reports are closed. Review and resolve pending reports.</Text>
-              </Alert>
-            )}
-            {stats.open === 0 && stats.total > 0 && (
-              <Alert icon={<IconChecks size={16} />} color="teal" variant="light">
-                <Text size="sm" fw={500}>All Caught Up!</Text>
-                <Text size="xs" c="dimmed">No open reports. Great job keeping up with citizen concerns!</Text>
-              </Alert>
-            )}
-            {reports.filter(r => r.priority === "HIGH" && r.status === "OPEN").length > 0 && (
-              <Alert icon={<IconBell size={16} />} color="red" variant="light">
-                <Text size="sm" fw={500}>Urgent Items</Text>
-                <Group gap="xs">
-                  <Text size="xs" c="dimmed">
-                    {reports.filter(r => r.priority === "HIGH" && r.status === "OPEN").length} high-priority reports need attention.
-                  </Text>
-                  <Badge size="xs" color="red">ACTION REQUIRED</Badge>
-                </Group>
-              </Alert>
-            )}
-          </Stack>
-        </Card>
+        <SystemInsights
+          openCount={stats.open}
+          avgConfidence={avgConfidence}
+          resolutionRate={resolutionRate}
+          totalReports={stats.total}
+          reportsWithConfidence={reports.filter(r => r.confidence).length}
+          highPriorityOpenCount={reports.filter(r => r.priority === "HIGH" && r.status === "OPEN").length}
+        />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-        <Paper withBorder p="md">
-          <Group justify="space-between">
-            <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                Unique Callers
-              </Text>
-              <Text size="xl" fw={700} mt="xs">
-                {uniqueCallers}
-              </Text>
-            </div>
-            <ThemeIcon variant="light" color="violet" size={36}>
-              <IconUsers size={20} />
-            </ThemeIcon>
-          </Group>
-        </Paper>
-
-        <Paper withBorder p="md">
-          <Group justify="space-between">
-            <div>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                Avg AI Confidence
-              </Text>
-              <Text size="xl" fw={700} mt="xs">
-                {avgConfidence.toFixed(0)}%
-              </Text>
-            </div>
-            <ThemeIcon variant="light" color="cyan" size={36}>
-              <IconTrendingUp size={20} />
-            </ThemeIcon>
-          </Group>
-        </Paper>
-
-        <Paper withBorder p="md">
-          <div>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-              Resolution Rate
-            </Text>
-            <Text size="xl" fw={700} mt="xs">
-              {resolutionRate.toFixed(0)}%
-            </Text>
-            <Progress value={resolutionRate} mt="xs" color="teal" size="sm" />
-          </div>
-        </Paper>
+        <MetricCard
+          icon={IconUsers}
+          label="Unique Callers"
+          value={uniqueCallers}
+          color="violet"
+        />
+        <MetricCard
+          icon={IconTrendingUp}
+          label="Avg AI Confidence"
+          value={`${avgConfidence.toFixed(0)}%`}
+          color="cyan"
+        />
+        <MetricCard
+          icon={IconChecks}
+          label="Resolution Rate"
+          value={`${resolutionRate.toFixed(0)}%`}
+          color="teal"
+          progress={resolutionRate}
+        />
       </SimpleGrid>
 
       <Grid>
@@ -245,32 +160,5 @@ export default function DashboardPage() {
         </Grid.Col>
       </Grid>
     </Stack>
-  );
-}
-
-type StatCardProps = {
-  icon: React.ComponentType<{ size?: number; stroke?: number }>;
-  label: string;
-  value: number;
-  color: string;
-};
-
-function StatCard({ icon: Icon, label, value, color }: StatCardProps) {
-  return (
-    <Paper withBorder p="md">
-      <Group justify="space-between">
-        <div>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            {label}
-          </Text>
-          <Text size="xl" fw={700} mt="xs">
-            {value}
-          </Text>
-        </div>
-        <ThemeIcon variant="light" color={color} size={36}>
-          <Icon size={20} stroke={1.5} />
-        </ThemeIcon>
-      </Group>
-    </Paper>
   );
 }
