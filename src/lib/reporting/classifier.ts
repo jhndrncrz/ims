@@ -1,8 +1,7 @@
+import OpenAI from "openai";
 import { ReportCategory, ReportPriority } from "@prisma/client";
 import { env } from "@/env";
 import { logger } from "@/lib/logger";
-
-const DASH_SCOPE_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
 
 type ClassificationResult = {
   category: ReportCategory;
@@ -10,17 +9,21 @@ type ClassificationResult = {
   confidence: number;
 };
 
-const buildClassificationPrompt = (message: string) => `You are a barangay report classifier. Analyze the following citizen report and classify it.
+// Initialize OpenAI client with Alibaba Cloud Model Studio endpoint
+const client = new OpenAI({
+  apiKey: env.ALIBABA_DASHSCOPE_API_KEY || "dummy-key",
+  baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+});
 
-Report: "${message}"
+const CLASSIFICATION_PROMPT = `You are a barangay report classifier. Analyze citizen reports and classify them accurately.
 
-Classify this report into one of these categories:
+Categories:
 - DISASTER: Natural disasters, floods, earthquakes, fires, storms
 - INFRASTRUCTURE: Broken streetlights, damaged roads, water/power issues
 - ADMIN: Document requests, permits, clearances, complaints
 - OTHER: Anything that doesn't fit the above categories
 
-Also assign a priority:
+Priority Levels:
 - HIGH: Immediate danger, disasters, emergencies
 - MEDIUM: Infrastructure problems, quality of life issues
 - LOW: Administrative requests, minor concerns
@@ -53,42 +56,25 @@ export const classifyReport = async (message: string): Promise<ClassificationRes
   }
 
   try {
-    const response = await fetch(DASH_SCOPE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.ALIBABA_DASHSCOPE_API_KEY}`
-      },
-      body: JSON.stringify({
-        input: { prompt: buildClassificationPrompt(message) },
-        model: "qwen-plus",
-        parameters: {
-          result_format: "text"
-        }
-      })
+    const completion = await client.chat.completions.create({
+      model: "qwen-plus",
+      messages: [
+        { role: "system", content: CLASSIFICATION_PROMPT },
+        { role: "user", content: `Report: "${message}"` }
+      ],
+      temperature: 0.3,
+      max_tokens: 100,
+      response_format: { type: "json_object" }
     });
 
-    if (!response.ok) {
-      logger.error("DashScope classification request failed", { status: response.status });
-      return fallbackClassify(message);
-    }
-
-    const json = (await response.json()) as { output?: { text?: string } };
-    const text = json.output?.text?.trim();
+    const text = completion.choices[0]?.message?.content?.trim();
 
     if (!text) {
       logger.warn("Empty response from DashScope, using fallback");
       return fallbackClassify(message);
     }
 
-    // Extract JSON from response (might have markdown code blocks)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.warn("No JSON found in DashScope response, using fallback");
-      return fallbackClassify(message);
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]) as { category: string; priority: string; confidence: number };
+    const parsed = JSON.parse(text) as { category: string; priority: string; confidence: number };
 
     // Validate the parsed result
     const validCategories = ["DISASTER", "INFRASTRUCTURE", "ADMIN", "OTHER"];

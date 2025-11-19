@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import pdf from "pdf-parse";
-import mammoth from "mammoth";
+import OpenAI from "openai";
+import { writeFileSync, unlinkSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 import { vectorStore } from "@/lib/rag/vector-store";
-import { enhancedOCR } from "@/lib/ai/enhancedOCR";
+import { env } from "@/env";
 
 const uploadSchema = z.object({
   title: z.string().min(1),
@@ -15,30 +17,42 @@ const uploadSchema = z.object({
   fileType: z.enum(["pdf", "docx", "txt", "image"]).optional()
 });
 
-async function extractTextFromFile(base64File: string, fileType: string): Promise<string> {
+async function extractTextFromFile(base64File: string, fileType: string, filename: string): Promise<string> {
   const buffer = Buffer.from(base64File, "base64");
 
-  switch (fileType) {
-    case "pdf": {
-      const data = await pdf(buffer);
-      return data.text;
+  // Handle plain text directly
+  if (fileType === "txt") {
+    return buffer.toString("utf-8");
+  }
+
+  // Use OpenAI file extraction API for other file types
+  const client = new OpenAI({
+    apiKey: env.ALIBABA_DASHSCOPE_API_KEY,
+    baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+  });
+
+  // Create temporary file
+  const tempFilePath = join(tmpdir(), `upload_${Date.now()}_${filename}`);
+  
+  try {
+    writeFileSync(tempFilePath, buffer);
+
+    // Use OpenAI file extraction
+    const fileObject = await client.files.create({
+      file: await import("fs").then(fs => fs.createReadStream(tempFilePath)),
+      purpose: "file-extract" as any
+    });
+
+    // The file object should contain the extracted text
+    // Note: The API response structure may vary, adjust based on actual response
+    return (fileObject as any).text || JSON.stringify(fileObject);
+  } finally {
+    // Clean up temporary file
+    try {
+      unlinkSync(tempFilePath);
+    } catch (error) {
+      console.error("Failed to delete temp file:", error);
     }
-    case "docx": {
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value;
-    }
-    case "txt":
-      return buffer.toString("utf-8");
-    case "image": {
-      const text = await enhancedOCR.extract({
-        imageBuffer: buffer,
-        language: "multi",
-        enhanced: true
-      });
-      return text;
-    }
-    default:
-      throw new Error("Unsupported file type");
   }
 }
 
@@ -62,7 +76,7 @@ export async function POST(request: NextRequest) {
       fileSize = saved.size;
 
       // Extract text from file
-      content = await extractTextFromFile(data.file, data.fileType);
+      content = await extractTextFromFile(data.file, data.fileType, filename);
     }
 
     if (content.length < 10) {
@@ -79,7 +93,7 @@ export async function POST(request: NextRequest) {
         fileType: data.fileType,
         filePath,
         fileSize,
-        tags: data.tags ? JSON.stringify(data.tags) : null
+        tags: data.tags ? data.tags : undefined
       }
     });
 

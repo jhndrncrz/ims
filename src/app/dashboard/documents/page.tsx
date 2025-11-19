@@ -14,8 +14,8 @@ import { useReportStore } from "@/store/reportStore";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  source: z.string().min(3, "Source must be at least 3 characters"),
-  content: z.string().min(20, "Content must be at least 20 characters").optional(),
+  source: z.string().min(3, "Source must be at least 3 characters").or(z.string().min(0)).optional().nullable(),
+  content: z.string().min(20, "Content must be at least 20 characters").or(z.string().min(0)).optional().nullable(),
   tags: z.array(z.string()).optional()
 });
 

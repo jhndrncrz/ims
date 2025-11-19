@@ -1,13 +1,12 @@
+import OpenAI from "openai";
 import { env } from "@/env";
 import { logger } from "@/lib/logger";
 import { tokenize } from "@/lib/rag/tokenizer";
 
-// Real vector embeddings using Alibaba Cloud DashScope
+// Real vector embeddings using Alibaba Cloud DashScope (OpenAI-compatible API)
 export type EmbeddingVector = number[];
 
-const DASHSCOPE_EMBEDDING_URL = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding";
-
-// Generate embeddings using Alibaba Cloud DashScope
+// Generate embeddings using Alibaba Cloud DashScope via OpenAI SDK
 export const buildEmbedding = async (text: string): Promise<EmbeddingVector> => {
   if (!env.ALIBABA_DASHSCOPE_API_KEY) {
     logger.warn("DashScope API key missing, using fallback TF-IDF embedding");
@@ -15,27 +14,18 @@ export const buildEmbedding = async (text: string): Promise<EmbeddingVector> => 
   }
 
   try {
-    const response = await fetch(DASHSCOPE_EMBEDDING_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.ALIBABA_DASHSCOPE_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "text-embedding-v2",
-        input: {
-          texts: [text.slice(0, 2048)] // Limit to 2048 chars
-        }
-      })
+    const client = new OpenAI({
+      apiKey: env.ALIBABA_DASHSCOPE_API_KEY,
+      baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     });
 
-    if (!response.ok) {
-      logger.error("DashScope embedding request failed", { status: response.status });
-      return buildTfIdfEmbedding(text);
-    }
+    const response = await client.embeddings.create({
+      model: "text-embedding-v3",
+      input: text.slice(0, 2048), // Limit to 2048 chars
+      encoding_format: "float"
+    });
 
-    const json = await response.json() as { output?: { embeddings?: Array<{ embedding: number[] }> } };
-    const embedding = json.output?.embeddings?.[0]?.embedding;
+    const embedding = response.data[0]?.embedding;
 
     if (!embedding || !Array.isArray(embedding)) {
       logger.warn("Invalid embedding response, using fallback");

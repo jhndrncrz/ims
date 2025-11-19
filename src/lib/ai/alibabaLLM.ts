@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { env } from "@/env";
 import { logger } from "@/lib/logger";
 
@@ -6,16 +7,15 @@ export type LLMRequest = {
   context: string;
 };
 
-const DASH_SCOPE_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+// Initialize OpenAI client with Alibaba Cloud Model Studio endpoint
+const client = new OpenAI({
+  apiKey: env.ALIBABA_DASHSCOPE_API_KEY || "dummy-key",
+  baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+});
 
-const buildPrompt = ({ question, context }: LLMRequest) => `You are Barangay AI SMS Hub, a factual Filipino barangay assistant.
-Use only the context below. If unsure, say: "Please check with the barangay hall."
-
-Context:
-${context}
-
-Question: ${question}
-Answer in two short paragraphs.`;
+const SYSTEM_PROMPT = `You are Barangay AI SMS Hub, a factual Filipino barangay assistant.
+Use only the context provided to answer questions. If the answer is not in the context or you are unsure, say: "Please check with the barangay hall."
+Answer in two short paragraphs, be concise and helpful.`;
 
 const fallbackAnswer = ({ question, context }: LLMRequest) => {
   if (!context.trim()) {
@@ -33,25 +33,24 @@ export const alibabaLLM = {
     }
 
     try {
-      const response = await fetch(DASH_SCOPE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${env.ALIBABA_DASHSCOPE_API_KEY}`
-        },
-        body: JSON.stringify({
-          input: { prompt: buildPrompt(payload) },
-          model: "qwen-plus"
-        })
+      const completion = await client.chat.completions.create({
+        model: "qwen-plus",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: `Context:\n${payload.context}\n\nQuestion: ${payload.question}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
       });
 
-      if (!response.ok) {
-        logger.error("DashScope request failed", { status: response.status, statusText: response.statusText });
+      const answer = completion.choices[0]?.message?.content?.trim();
+      
+      if (!answer) {
+        logger.warn("Empty response from DashScope");
         return fallbackAnswer(payload);
       }
 
-      const json = (await response.json()) as { output?: { text?: string } };
-      return json.output?.text?.trim() || fallbackAnswer(payload);
+      return answer;
     } catch (error) {
       logger.error("DashScope error", { error });
       return fallbackAnswer(payload);

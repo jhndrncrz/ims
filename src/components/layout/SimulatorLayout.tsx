@@ -3,28 +3,20 @@
 import { AppShell, Burger, Group, NavLink, ScrollArea, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
-  IconChartBar,
-  IconFileText,
-  IconHome,
-  IconMessages,
-  IconSettings
+  IconMessage
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode } from "react";
 
-type DashboardLayoutProps = {
+type SimulatorLayoutProps = {
   children: ReactNode;
 };
 
 const navigation = [
-  { label: "Dashboard", icon: IconHome, href: "/dashboard" },
-  { label: "Reports", icon: IconChartBar, href: "/dashboard/reports" },
-  { label: "Conversations", icon: IconMessages, href: "/dashboard/conversations" },
-  { label: "Knowledge Base", icon: IconFileText, href: "/dashboard/documents" },
-  { label: "Settings", icon: IconSettings, href: "/dashboard/settings" }
+  { label: "Simulator", icon: IconMessage, href: "/simulator" },
 ];
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function SimulatorLayout({ children }: SimulatorLayoutProps) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
