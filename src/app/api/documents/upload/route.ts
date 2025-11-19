@@ -1,58 +1,151 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import OpenAI from "openai";
-import { writeFileSync, unlinkSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+import mammoth from "mammoth";
+import Tesseract from "tesseract.js";
+import { PDFParse } from "pdf-parse";
 
 import { vectorStore } from "@/lib/rag/vector-store";
-import { env } from "@/env";
 
 const uploadSchema = z.object({
   title: z.string().min(1),
-  source: z.string().min(1),
-  content: z.string().min(10).optional(),
+  source: z.string().min(0).optional(),
+  content: z.string().min(0).optional(),
   tags: z.array(z.string()).optional(),
   file: z.string().optional(), // base64 encoded file
   fileType: z.enum(["pdf", "docx", "txt", "image"]).optional()
 });
 
-async function extractTextFromFile(base64File: string, fileType: string, filename: string): Promise<string> {
+/**
+ * Extract text from various file types using dedicated TypeScript libraries
+ * - PDF: pdf-parse
+ * - DOCX: mammoth
+ * - Images: tesseract.js (OCR)
+ * - TXT: direct UTF-8 decoding
+ */
+async function extractTextFromFile(base64File: string, fileType: string): Promise<string> {
   const buffer = Buffer.from(base64File, "base64");
 
-  // Handle plain text directly
-  if (fileType === "txt") {
-    return buffer.toString("utf-8");
-  }
-
-  // Use OpenAI file extraction API for other file types
-  const client = new OpenAI({
-    apiKey: env.ALIBABA_DASHSCOPE_API_KEY,
-    baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-  });
-
-  // Create temporary file
-  const tempFilePath = join(tmpdir(), `upload_${Date.now()}_${filename}`);
-  
   try {
-    writeFileSync(tempFilePath, buffer);
+    switch (fileType) {
+      case "txt":
+        return buffer.toString("utf-8");
 
-    // Use OpenAI file extraction
-    const fileObject = await client.files.create({
-      file: await import("fs").then(fs => fs.createReadStream(tempFilePath)),
-      purpose: "file-extract" as any
-    });
+      case "pdf": {
+        // Try text extraction first
+        try {
+          const { resolve } = await import("path");
+          const workerPath = resolve(process.cwd(), 'node_modules/pdf-parse/dist/worker/pdf.worker.mjs');
+          PDFParse.setWorker(workerPath);
+          
+          const parser = new PDFParse({ data: buffer });
+          const result = await parser.getText();
+          await parser.destroy();
+          
+          // If text extraction yields substantial content, use it
+          if (result.text && result.text.trim().length > 50) {
+            console.log(`📄 PDF extracted: ${result.pages.length} pages, ${result.text.length} chars`);
+            return result.text;
+          }
+          
+          console.log("⚠️ PDF has minimal text, falling back to OCR...");
+        } catch (textError) {
+          console.log("⚠️ PDF text extraction failed, falling back to OCR:", textError);
+        }
+        
+        // Fall back to OCR for image-based PDFs
+        console.log("🖼️ Starting OCR on PDF pages...");
+        const { data: { text } } = await Tesseract.recognize(
+          buffer,
+          'eng+chi_sim+chi_tra+fil',
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                console.log(`PDF OCR progress: ${Math.round(m.progress * 100)}%`);
+              }
+            }
+          }
+        );
+        
+        if (!text || text.trim().length === 0) {
+          throw new Error("PDF contains no recognizable text even after OCR");
+        }
+        
+        console.log(`🔍 PDF OCR extracted: ${text.length} chars`);
+        return text;
+      }
 
-    // The file object should contain the extracted text
-    // Note: The API response structure may vary, adjust based on actual response
-    return (fileObject as any).text || JSON.stringify(fileObject);
-  } finally {
-    // Clean up temporary file
-    try {
-      unlinkSync(tempFilePath);
-    } catch (error) {
-      console.error("Failed to delete temp file:", error);
+      case "docx": {
+        // Try text extraction first
+        try {
+          const result = await mammoth.extractRawText({ buffer });
+          
+          if (result.messages.length > 0) {
+            console.warn("⚠️ DOCX extraction warnings:", result.messages);
+          }
+          
+          // If text extraction yields substantial content, use it
+          if (result.value && result.value.trim().length > 50) {
+            console.log(`📝 DOCX extracted: ${result.value.length} chars`);
+            return result.value;
+          }
+          
+          console.log("⚠️ DOCX has minimal text, falling back to OCR...");
+        } catch (textError) {
+          console.log("⚠️ DOCX text extraction failed, falling back to OCR:", textError);
+        }
+        
+        // Fall back to OCR for image-based or corrupted DOCX
+        console.log("🖼️ Starting OCR on DOCX...");
+        const { data: { text } } = await Tesseract.recognize(
+          buffer,
+          'eng+chi_sim+chi_tra+fil',
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                console.log(`DOCX OCR progress: ${Math.round(m.progress * 100)}%`);
+              }
+            }
+          }
+        );
+        
+        if (!text || text.trim().length === 0) {
+          throw new Error("DOCX contains no recognizable text even after OCR");
+        }
+        
+        console.log(`🔍 DOCX OCR extracted: ${text.length} chars`);
+        return text;
+      }
+
+      case "image": {
+        // Use Tesseract.js for OCR on images
+        console.log("🖼️ Starting OCR on image...");
+        
+        const { data: { text } } = await Tesseract.recognize(
+          buffer,
+          'eng+chi_sim+chi_tra+fil', // English + Chinese Simplified + Traditional + Filipino
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                console.log(`OCR progress: ${Math.round(m.progress * 100)}%`);
+              }
+            }
+          }
+        );
+        
+        if (!text || text.trim().length === 0) {
+          throw new Error("Image contains no recognizable text");
+        }
+        
+        console.log(`🔍 OCR extracted: ${text.length} chars`);
+        return text;
+      }
+
+      default:
+        throw new Error(`Unsupported file type: ${fileType}`);
     }
+  } catch (error) {
+    console.error(`❌ Text extraction failed for ${fileType}:`, error);
+    throw new Error(`Failed to extract text from ${fileType}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -76,7 +169,7 @@ export async function POST(request: NextRequest) {
       fileSize = saved.size;
 
       // Extract text from file
-      content = await extractTextFromFile(data.file, data.fileType, filename);
+      content = await extractTextFromFile(data.file, data.fileType);
     }
 
     if (content.length < 10) {
@@ -88,7 +181,7 @@ export async function POST(request: NextRequest) {
     const document = await prisma.document.create({
       data: {
         title: data.title,
-        source: data.source,
+        source: data.source ?? "",
         content,
         fileType: data.fileType,
         filePath,
@@ -100,7 +193,7 @@ export async function POST(request: NextRequest) {
     // Also save to vector store for RAG
     await vectorStore.upsertChunk({
       title: data.title,
-      source: data.source,
+      source: data.source ?? "",
       content,
       tags: data.tags
     });

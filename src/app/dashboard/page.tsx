@@ -69,9 +69,7 @@ export default function DashboardPage() {
         <StatCard icon={IconChecks} label="Closed" value={stats.closed} color="teal" />
       </SimpleGrid>
 
-      {/* Quick Actions and Alerts */}
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <Card withBorder shadow="sm">
+      <Card withBorder shadow="sm">
           <Group justify="space-between" mb="md">
             <Text fw={600} size="sm">Quick Actions</Text>
           </Group>
@@ -99,21 +97,11 @@ export default function DashboardPage() {
             >
               Check Conversations
             </Button>
-            <Button 
-              component={Link} 
-              href="/dashboard/knowledge" 
-              variant="light" 
-              color="cyan"
-              leftSection={<IconTrendingUp size={16} />}
-              rightSection={<IconArrowRight size={16} />}
-              fullWidth
-              justify="space-between"
-            >
-              Improve Knowledge Base
-            </Button>
           </Stack>
         </Card>
 
+      {/* Quick Actions and Alerts */}
+      <SimpleGrid cols={{ base: 1, md: 1 }}>
         <Card withBorder shadow="sm">
           <Group justify="space-between" mb="md">
             <Text fw={600} size="sm">System Insights</Text>

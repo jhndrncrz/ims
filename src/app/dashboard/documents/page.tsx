@@ -6,6 +6,7 @@ import { useForm, zodResolver } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconFileText, IconPlus, IconTrash, IconUpload, IconX, IconBook, IconReportSearch, IconEye } from "@tabler/icons-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -34,7 +35,7 @@ export default function DocumentsPage() {
   const [opened, { open, close }] = useDisclosure(false);
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string } | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string; fileType?: string | null; filePath?: string | null; id: string } | null>(null);
   const [previewOpened, { open: openPreview, close: closePreview }] = useDisclosure(false);
 
   const form = useForm({
@@ -130,7 +131,13 @@ export default function DocumentsPage() {
       const response = await fetch(`/api/documents/${docId}`);
       if (!response.ok) throw new Error("Failed to fetch document");
       const doc = await response.json();
-      setPreviewDoc({ title: doc.title, content: doc.content });
+      setPreviewDoc({ 
+        id: doc.id,
+        title: doc.title, 
+        content: doc.content,
+        fileType: doc.fileType,
+        filePath: doc.filePath
+      });
       openPreview();
     } catch (error) {
       console.error(error);
@@ -140,6 +147,13 @@ export default function DocumentsPage() {
         color: "red"
       });
     }
+  };
+
+  const handleDownload = (docId: string) => {
+    // Use download=true query param to force download with proper filename
+    const link = document.createElement('a');
+    link.href = `/api/documents/${docId}/file?download=true`;
+    link.click();
   };
 
   return (
@@ -351,9 +365,43 @@ export default function DocumentsPage() {
       </Modal>
 
       <Modal opened={previewOpened} onClose={closePreview} title={previewDoc?.title} size="xl">
-        <Paper p="md" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <Text style={{ whiteSpace: 'pre-wrap' }}>{previewDoc?.content}</Text>
-        </Paper>
+        <Stack gap="md">
+          {previewDoc?.filePath && (
+            <Group justify="flex-end">
+              <Button 
+                variant="light" 
+                size="sm" 
+                leftSection={<IconFileText size={16} />}
+                onClick={() => handleDownload(previewDoc.id)}
+              >
+                Download File
+              </Button>
+            </Group>
+          )}
+          
+          {previewDoc?.fileType === 'pdf' && previewDoc.filePath ? (
+            <iframe
+              src={`/api/documents/${previewDoc.id}/file`}
+              style={{ width: '100%', height: '70vh', border: 'none' }}
+              title={previewDoc.title}
+            />
+          ) : previewDoc?.fileType === 'image' && previewDoc.filePath ? (
+            <Paper p="md" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', maxHeight: '70vh' }}>
+              <Image 
+                src={`/api/documents/${previewDoc.id}/file`} 
+                alt={previewDoc.title}
+                width={800}
+                height={600}
+                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', width: 'auto', height: 'auto' }}
+                unoptimized
+              />
+            </Paper>
+          ) : (
+            <Paper p="md" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <Text style={{ whiteSpace: 'pre-wrap' }}>{previewDoc?.content}</Text>
+            </Paper>
+          )}
+        </Stack>
       </Modal>
     </Stack>
   );

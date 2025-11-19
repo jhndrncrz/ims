@@ -20,7 +20,7 @@ const createReportSchema = z.object({
 export async function POST(request: NextRequest) {
   const data = createReportSchema.parse(await request.json());
   const normalizedPhone = formatPhone(data.phoneNumber);
-  const classification = classifyReport(data.message);
+  const classification = await classifyReport(data.message);
 
   const report = await reportService.create({
     phoneNumber: normalizedPhone,

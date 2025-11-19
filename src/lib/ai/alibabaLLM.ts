@@ -55,7 +55,7 @@ export const alibabaLLM = {
       }
 
       logger.info("✅ LLM API call successful", {
-        model: "qwen-plus",
+        model: "qwen-flash",
         questionLength: payload.question.length,
         contextLength: payload.context.length,
         answerLength: answer.length,

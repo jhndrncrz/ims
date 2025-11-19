@@ -59,20 +59,35 @@ export const vectorStore = {
   },
 
   async similaritySearch(query: string, limit = 4) {
+    logger.info("🔍 Starting similarity search", { query: query.slice(0, 50), limit });
+    
     const queryEmbedding = await buildEmbedding(query);
+    logger.info("📐 Query embedding generated", { dimensions: queryEmbedding.length });
+    
     const chunks = await prisma.documentChunk.findMany();
+    logger.info("📚 Retrieved chunks from database", { totalChunks: chunks.length });
+    
+    if (chunks.length === 0) {
+      logger.warn("⚠️ No chunks found in database! Please run: pnpm rag:ingest");
+      return [];
+    }
     
     type ScoredChunk = { chunk: DocumentChunk; score: number };
-    const scored: ScoredChunk[] = chunks.map((chunk: DocumentChunk) => ({
-      chunk,
-      score: cosineSimilarity(queryEmbedding, parseEmbedding(chunk.embedding))
-    }));
+    const scored: ScoredChunk[] = chunks.map((chunk: DocumentChunk) => {
+      const chunkEmbedding = parseEmbedding(chunk.embedding);
+      const score = cosineSimilarity(queryEmbedding, chunkEmbedding);
+      return { chunk, score };
+    });
     
     const sorted = scored.sort((a, b) => b.score - a.score).slice(0, limit);
-    logger.info(`Similarity search completed`, { 
+    
+    logger.info(`✅ Similarity search completed`, { 
       query: query.slice(0, 50), 
       topScore: sorted[0]?.score,
-      results: sorted.length 
+      allScores: sorted.map(s => ({ title: s.chunk.title, score: s.score.toFixed(4) })),
+      results: sorted.length,
+      queryEmbedDim: queryEmbedding.length,
+      firstChunkEmbedDim: sorted[0] ? parseEmbedding(sorted[0].chunk.embedding).length : 0
     });
     
     return sorted;
@@ -86,13 +101,17 @@ const parseEmbedding = (value: unknown): EmbeddingVector => {
       if (Array.isArray(parsed)) {
         return parsed;
       }
-    } catch {
-      // Fall through to default
+    } catch (error) {
+      logger.error("Failed to parse embedding JSON", { error, valuePreview: String(value).slice(0, 100) });
     }
   }
   if (Array.isArray(value)) {
     return value;
   }
-  logger.warn("Invalid embedding format, returning empty vector");
-  return new Array(768).fill(0);
+  logger.warn("⚠️ Invalid embedding format, returning empty 1024-dim vector", {
+    valueType: typeof value,
+    isArray: Array.isArray(value)
+  });
+  // Return 1024 dimensions to match text-embedding-v3
+  return new Array(1024).fill(0);
 };

@@ -35,10 +35,21 @@ const embedding = await client.embeddings.create({
   encoding_format: "float"
 });
 
-// File extraction (documents/PDFs)
+// File extraction (documents/PDFs) - Two-step process
+// Step 1: Upload file to get file-id
 const fileObject = await client.files.create({
   file: createReadStream(tempFilePath),
-  purpose: "file-extract" as any // Cast needed, not in OpenAI types
+  purpose: "file-extract" as any
+});
+
+// Step 2: Use qwen-long model to extract text via fileid://
+const completion = await client.chat.completions.create({
+  model: "qwen-long",
+  messages: [
+    { role: "system", content: "Extract text assistant prompt" },
+    { role: "system", content: `fileid://${fileObject.id}` },
+    { role: "user", content: "Extract all text from this document" }
+  ]
 });
 ```
 
