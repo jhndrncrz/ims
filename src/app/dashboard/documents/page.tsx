@@ -297,7 +297,7 @@ export default function DocumentsPage() {
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             <TextInput label="Title" placeholder="Ordinances 2024" withAsterisk {...form.getInputProps("title")} />
-            <TextInput label="Source" placeholder="ordinances-2024.md" withAsterisk {...form.getInputProps("source")} />
+            <TextInput label="Source" placeholder="ordinances-2024.md" {...form.getInputProps("source")} />
             
             <Dropzone
               onDrop={(files) => setUploadFile(files[0])}

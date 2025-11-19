@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Card, Group, Paper, ScrollArea, Stack, Text, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IconChevronRight } from "@tabler/icons-react";
 
 import { formatDateTime } from "@/lib/formatters";
@@ -30,7 +30,7 @@ export default function ConversationsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/conversations");
@@ -44,12 +44,11 @@ export default function ConversationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedConv]);
 
   useEffect(() => {
     void fetchConversations();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchConversations]);
 
   return (
     <Stack gap="lg">

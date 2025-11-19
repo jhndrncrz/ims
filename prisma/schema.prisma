@@ -61,8 +61,8 @@ model Report {
 model Document {
   id          String   @id @default(cuid())
   title       String
-  source      String
-  content     String
+  source      String?
+  content     String?
   fileType    String?
   filePath    String?
   fileSize    Int?
