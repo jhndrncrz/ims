@@ -28,13 +28,15 @@ const fallbackAnswer = ({ question, context }: LLMRequest) => {
 export const alibabaLLM = {
   async ask(payload: LLMRequest) {
     if (!env.ALIBABA_DASHSCOPE_API_KEY) {
-      logger.warn("DashScope API key missing, using fallback answer");
+      logger.warn("🔴 FALLBACK: DashScope API key missing, using fallback answer", {
+        questionPreview: payload.question.slice(0, 50)
+      });
       return fallbackAnswer(payload);
     }
 
     try {
       const completion = await client.chat.completions.create({
-        model: "qwen-plus",
+        model: "qwen-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Context:\n${payload.context}\n\nQuestion: ${payload.question}` }
@@ -46,13 +48,27 @@ export const alibabaLLM = {
       const answer = completion.choices[0]?.message?.content?.trim();
       
       if (!answer) {
-        logger.warn("Empty response from DashScope");
+        logger.warn("🔴 FALLBACK: Empty response from DashScope LLM", {
+          questionPreview: payload.question.slice(0, 50)
+        });
         return fallbackAnswer(payload);
       }
 
+      logger.info("✅ LLM API call successful", {
+        model: "qwen-plus",
+        questionLength: payload.question.length,
+        contextLength: payload.context.length,
+        answerLength: answer.length,
+        questionPreview: payload.question.slice(0, 50)
+      });
+
       return answer;
     } catch (error) {
-      logger.error("DashScope error", { error });
+      logger.error("🔴 FALLBACK: DashScope LLM error", { 
+        error: error instanceof Error ? error.message : String(error),
+        errorDetails: error,
+        questionPreview: payload.question.slice(0, 50)
+      });
       return fallbackAnswer(payload);
     }
   }

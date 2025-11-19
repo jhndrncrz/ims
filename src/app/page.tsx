@@ -40,7 +40,7 @@ export default function Home() {
               <Text size="sm" c="dimmed" ta="center">
                 Test the AI chatbot and see real-time SMS responses
               </Text>
-              <Button fullWidth size="md" variant="light" onClick={() => router.push("/dashboard/sms")}>
+              <Button fullWidth size="md" variant="light" onClick={() => router.push("/simulator")}>
                 Try SMS Bot
               </Button>
             </Stack>

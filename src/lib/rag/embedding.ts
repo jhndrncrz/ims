@@ -9,7 +9,9 @@ export type EmbeddingVector = number[];
 // Generate embeddings using Alibaba Cloud DashScope via OpenAI SDK
 export const buildEmbedding = async (text: string): Promise<EmbeddingVector> => {
   if (!env.ALIBABA_DASHSCOPE_API_KEY) {
-    logger.warn("DashScope API key missing, using fallback TF-IDF embedding");
+    logger.warn("🔴 FALLBACK: DashScope API key missing, using TF-IDF embedding", { 
+      textPreview: text.slice(0, 50) 
+    });
     return buildTfIdfEmbedding(text);
   }
 
@@ -28,19 +30,38 @@ export const buildEmbedding = async (text: string): Promise<EmbeddingVector> => 
     const embedding = response.data[0]?.embedding;
 
     if (!embedding || !Array.isArray(embedding)) {
-      logger.warn("Invalid embedding response, using fallback");
+      logger.warn("🔴 FALLBACK: Invalid embedding response from API", { 
+        hasEmbedding: !!embedding, 
+        isArray: Array.isArray(embedding),
+        responseData: response.data[0]
+      });
       return buildTfIdfEmbedding(text);
     }
 
+    logger.info("✅ API embedding successful", { 
+      dimensions: embedding.length,
+      model: "text-embedding-v3",
+      textLength: text.length,
+      textPreview: text.slice(0, 50)
+    });
+
     return embedding;
   } catch (error) {
-    logger.error("Error generating embedding", { error });
+    logger.error("🔴 FALLBACK: Error calling embedding API", { 
+      error: error instanceof Error ? error.message : String(error),
+      errorDetails: error,
+      textPreview: text.slice(0, 50)
+    });
     return buildTfIdfEmbedding(text);
   }
 };
 
 // Fallback TF-IDF based embedding (normalized to 768 dimensions for consistency)
 const buildTfIdfEmbedding = (text: string): number[] => {
+  logger.info("📊 Using TF-IDF fallback embedding (768 dimensions)", { 
+    textLength: text.length,
+    textPreview: text.slice(0, 50)
+  });
   const tokens = tokenize(text);
   const counts: Record<string, number> = {};
   
