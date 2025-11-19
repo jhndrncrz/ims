@@ -3,11 +3,23 @@ import { MessageDirection } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 
 export const messageService = {
-  log: async (input: { direction: MessageDirection; phoneNumber: string; body: string; responseId?: string; metadata?: Record<string, unknown> }) => {
+  log: async (input: { 
+    direction: MessageDirection; 
+    channel: string; 
+    phoneNumber: string; 
+    email?: string; 
+    messengerId?: string; 
+    body: string; 
+    responseId?: string; 
+    metadata?: Record<string, unknown> 
+  }) => {
     return prisma.messageLog.create({
       data: {
         direction: input.direction,
+        channel: input.channel as any,
         phoneNumber: input.phoneNumber,
+        email: input.email,
+        messengerId: input.messengerId,
         body: input.body,
         responseId: input.responseId,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

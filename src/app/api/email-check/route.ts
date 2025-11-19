@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
       const result = await smsProcessor.handleIncoming({
         phoneNumber: `email:${senderEmail}`,
         message: messageBody.trim(),
-        skipSmsReply: true // Don't send SMS, will send email reply
+        skipSmsReply: true, // Don't send SMS, will send email reply
+        channel: "EMAIL"
       });
 
       processed.push({

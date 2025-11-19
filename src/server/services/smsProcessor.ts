@@ -25,10 +25,13 @@ export type SmsProcessResult =
     };
 
 export const smsProcessor = {
-  async handleIncoming(input: { phoneNumber: string; message: string; skipSmsReply?: boolean }): Promise<SmsProcessResult> {
+  async handleIncoming(input: { phoneNumber: string; message: string; skipSmsReply?: boolean; channel?: string }): Promise<SmsProcessResult> {
     const normalizedPhone = formatPhone(input.phoneNumber);
+    const channel = input.channel || "SMS";
+    
     await messageService.log({
       direction: MessageDirection.INBOUND,
+      channel,
       phoneNumber: normalizedPhone,
       body: input.message
     });
@@ -55,6 +58,7 @@ export const smsProcessor = {
 
       await messageService.log({
         direction: MessageDirection.OUTBOUND,
+        channel,
         phoneNumber: normalizedPhone,
         body: ackMessage,
         metadata: { reportId: report.id }
@@ -71,6 +75,7 @@ export const smsProcessor = {
 
     await messageService.log({
       direction: MessageDirection.OUTBOUND,
+      channel,
       phoneNumber: normalizedPhone,
       body: ragAnswer.answer,
       metadata: { references: ragAnswer.references }

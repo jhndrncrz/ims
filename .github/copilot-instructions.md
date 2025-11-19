@@ -3,9 +3,12 @@
 ## Project Overview
 Multi-channel Filipino barangay assistant that routes citizen messages through either:
 1. **Report Classification Pipeline**: Detects incidents (broken streetlight, flood) → LLM classifier → Prisma storage → SMS acknowledgment
-2. **RAG Question Answering Pipeline**: FAQ queries → Vector similarity search → Context retrieval → LLM generation → SMS reply
+2. **RAG Question Answering Pipeline**: FAQ queries → Vector similarity search → Context retrieval → LLM generation → Reply via original channel
 
-**Tech Stack**: Next.js 16 (App Router), Mantine UI v8, Prisma + SQLite, OpenAI SDK with Alibaba Cloud Model Studio, multi-channel support (SMS/Messenger/Email)
+**Tech Stack**: Next.js 16 (App Router), Mantine UI v8, Prisma + SQLite, OpenAI SDK with Alibaba Cloud Model Studio
+
+**Supported Channels**: SMS (Alibaba Dysms), Facebook Messenger, Email (IMAP)
+**NOT Supported**: WhatsApp (intentionally excluded)
 
 ## Critical Architecture Patterns
 
@@ -28,28 +31,11 @@ const completion = await client.chat.completions.create({
   response_format: { type: "json_object" } // For classifier only
 });
 
-// Embeddings (text-embedding-v3)
+// Embeddings (text-embedding-v3) - returns 1024 dimensions
 const embedding = await client.embeddings.create({
   model: "text-embedding-v3",
   input: text.slice(0, 2048),
   encoding_format: "float"
-});
-
-// File extraction (documents/PDFs) - Two-step process
-// Step 1: Upload file to get file-id
-const fileObject = await client.files.create({
-  file: createReadStream(tempFilePath),
-  purpose: "file-extract" as any
-});
-
-// Step 2: Use qwen-long model to extract text via fileid://
-const completion = await client.chat.completions.create({
-  model: "qwen-long",
-  messages: [
-    { role: "system", content: "Extract text assistant prompt" },
-    { role: "system", content: `fileid://${fileObject.id}` },
-    { role: "user", content: "Extract all text from this document" }
-  ]
 });
 ```
 
@@ -84,11 +70,16 @@ The RAG system uses two-step chunking + embedding:
 
 1. **Document Upload** (`src/app/api/documents/upload/route.ts`):
    - Save file to `uploads/` directory via `fileStorage.saveFile()`
-   - Extract text using OpenAI file extraction API
+   - Extract text using TypeScript libraries:
+     * **PDF**: `pdf-parse` with PDFParse class (requires worker setup)
+     * **DOCX**: `mammoth.extractRawText()`
+     * **Images**: `tesseract.js` OCR (multi-language: eng+chi_sim+chi_tra+fil)
+     * **TXT**: Direct UTF-8 buffer.toString()
+   - **OCR Fallback**: If text extraction yields <50 chars, automatically run OCR
    - Create `Document` record (metadata)
    - Call `vectorStore.upsertChunk()` which:
      - Splits content into ~500 char chunks (sentence boundaries)
-     - Generates embeddings for each chunk
+     - Generates embeddings for each chunk via text-embedding-v3 (1024 dims)
      - Stores in `DocumentChunk` table with JSON-stringified embeddings
 
 2. **Query Answering** (`src/lib/rag/engine.ts`):
@@ -163,11 +154,6 @@ pnpm build && pnpm start    # Production build + serve
 pnpm db:push               # Sync Prisma schema to SQLite (no migration)
 pnpm db:migrate            # Create named migration
 pnpm db:generate           # Regenerate Prisma client after schema changes
-pnpm db:seed               # Seed demo data
-
-# RAG Knowledge Base
-pnpm rag:ingest            # Chunk + embed all files in data/docs/
-                           # Run after editing markdown docs
 ```
 
 **Important**: Always run `pnpm db:generate` after modifying `prisma/schema.prisma` before using new fields.
@@ -192,13 +178,16 @@ Always validate LLM responses against enum values before using.
 
 ## Multi-Channel Support
 
-The system supports 4 channels (`ChannelType` enum): `SMS`, `MESSENGER`, `EMAIL`, `WHATSAPP`
+The system supports 3 channels (`ChannelType` enum): `SMS`, `MESSENGER`, `EMAIL`
+**Note**: `WHATSAPP` exists in schema but is NOT implemented (should be removed)
 
 - **SMS**: Primary channel, uses `@alicloud/pop-core` for Alibaba Dysms API
 - **Messenger**: Webhook at `/api/messenger-webhook/route.ts`, requires `MESSENGER_PAGE_ACCESS_TOKEN`
-- **Email**: IMAP receiver in `src/lib/email/receiver.ts`, polling-based
+- **Email**: IMAP receiver in `src/lib/email/receiver.ts`, polling-based (receive-only, no SMTP send)
 
 When creating reports or messages, always specify `channel` field. Default to `SMS` if unspecified.
+
+**Known Issue**: `messageService.log()` does not accept `channel` parameter yet. Needs to be added.
 
 ## Environment Variables (src/env.ts)
 
@@ -213,7 +202,7 @@ All env vars validated with Zod schema at runtime:
 
 ## Common Pitfalls
 
-1. **Embedding Dimension Mismatch**: `text-embedding-v3` returns variable dimensions. Fallback TF-IDF uses 768 dims. `cosineSimilarity()` checks length but logs warning.
+1. **Embedding Dimensions**: `text-embedding-v3` returns 1024 dims (fixed). Fallback TF-IDF also uses 1024 dims (updated). All embeddings are now consistent.
 
 2. **JSON Serialization of Embeddings**: Prisma stores embeddings as `Json` type. Always `JSON.stringify()` before insert, `JSON.parse()` on read. See `vectorStore.upsertChunk()` and `parseEmbedding()`.
 
@@ -226,25 +215,36 @@ All env vars validated with Zod schema at runtime:
    <Group><Text>Label:</Text><Badge>{value}</Badge></Group>
    ```
 
-4. **File Upload Cleanup**: OpenAI file extraction requires temp files. Always `unlinkSync()` in finally block. See `src/app/api/documents/upload/route.ts`.
+4. **PDF Worker Setup**: `pdf-parse` requires worker configuration:
+   ```tsx
+   PDFParse.setWorker('path/to/pdf.worker.mjs');
+   const parser = new PDFParse({ data: buffer });
+   const result = await parser.getText();
+   await parser.destroy(); // Always cleanup
+   ```
 
-5. **Prisma Client Regeneration**: After schema changes, TypeScript won't recognize new fields until `pnpm db:generate` runs. Error messages like "Property 'xyz' does not exist" usually indicate missing regeneration.
+5. **OCR for Scanned Documents**: If text extraction returns <50 chars, system automatically falls back to tesseract.js OCR. This handles scanned PDFs and image-based documents.
+
+6. **Prisma Client Regeneration**: After schema changes, TypeScript won't recognize new fields until `pnpm db:generate` runs. Error messages like "Property 'xyz' does not exist" usually indicate missing regeneration.
 
 ## Testing Locally Without API Keys
 
 All AI features have **graceful fallbacks**:
 - **LLM**: Returns context snippet fallback
 - **Classifier**: Regex-based keyword matching
-- **Embeddings**: TF-IDF vectors (768 dims)
+- **Embeddings**: TF-IDF vectors (1024 dims)
 - **SMS**: Logs to console instead of sending
+- **Text Extraction**: OCR fallback for scanned documents
 
 Set `NODE_ENV=development` to see fallback logs.
 
 ## Key Files Reference
 
-- **Entry Points**: `src/app/api/sms-webhook/route.ts`, `src/app/api/messenger-webhook/route.ts`
-- **Business Logic**: `src/server/services/smsProcessor.ts`, `src/server/services/reportService.ts`
+- **Entry Points**: `src/app/api/sms-webhook/route.ts`, `src/app/api/messenger-webhook/route.ts`, `src/app/api/email-check/route.ts`
+- **Business Logic**: `src/server/services/smsProcessor.ts`, `src/server/services/reportService.ts`, `src/server/services/messageService.ts`
 - **RAG System**: `src/lib/rag/{engine.ts,vector-store.ts,embedding.ts}`
+- **Document Processing**: `src/app/api/documents/upload/route.ts` (pdf-parse, mammoth, tesseract.js)
 - **AI Integration**: `src/lib/ai/alibabaLLM.ts`, `src/lib/reporting/classifier.ts`
-- **UI Components**: `src/components/dashboard/ReportDetailModal.tsx` (Combobox patterns)
+- **File Storage**: `src/lib/storage/fileStorage.ts` (uploads/ directory)
+- **UI Components**: `src/components/dashboard/ReportDetailModal.tsx` (Combobox patterns), `src/app/dashboard/documents/page.tsx` (upload UI)
 - **Database Schema**: `prisma/schema.prisma` (4 models: Report, Document, DocumentChunk, MessageLog)

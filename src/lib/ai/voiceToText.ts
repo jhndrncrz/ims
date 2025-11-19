@@ -71,11 +71,5 @@ export const voiceToText = {
       logger.error("Voice transcription error", { error });
       throw error;
     }
-  },
-
-  // Fallback: simple mock for development
-  async mockTranscribe(audioBuffer: Buffer): Promise<string> {
-    logger.info("Using mock voice transcription", { bufferSize: audioBuffer.length });
-    return "This is a mock transcription. Configure ALIBABA_DASHSCOPE_API_KEY for real voice recognition.";
   }
 };

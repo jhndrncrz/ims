@@ -35,7 +35,6 @@ enum ChannelType {
   SMS
   MESSENGER
   EMAIL
-  WHATSAPP
 }
 
 model Report {

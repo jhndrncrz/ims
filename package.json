@@ -9,9 +9,7 @@
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev --name init",
-    "db:seed": "tsx prisma/seed.ts",
-    "rag:ingest": "tsx scripts/ingest-docs.ts"
+    "db:migrate": "prisma migrate dev --name init"
   },
   "dependencies": {
     "@alicloud/pop-core": "^1.8.0",

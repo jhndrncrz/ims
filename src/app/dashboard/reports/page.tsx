@@ -1,14 +1,23 @@
 "use client";
 
-import { Badge, Button, Card, ScrollArea, Stack, Table, Text, Title } from "@mantine/core";
+import { Badge, Button, Card, Group, Modal, ScrollArea, Stack, Table, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconBuildingBridge, IconFlame, IconFileText, IconQuestionMark, IconAlertTriangle, IconClock, IconCheck } from "@tabler/icons-react";
-import { useEffect, useState, createElement } from "react";
+import { useForm, zodResolver } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
+import { IconBuildingBridge, IconFlame, IconFileText, IconQuestionMark, IconAlertTriangle, IconClock, IconCheck, IconPlus } from "@tabler/icons-react";
+import { useEffect, useState, createElement, useCallback } from "react";
+import { z } from "zod";
 
 import { formatDateTime } from "@/lib/formatters";
 import { useReportStore } from "@/store/reportStore";
 import type { ReportDTO } from "@/types/report";
 import { ReportDetailModal } from "@/components/dashboard/ReportDetailModal";
+
+const manualReportSchema = z.object({
+  phoneNumber: z.string().min(10, "Enter a valid PH number"),
+  message: z.string().min(10, "Share more details"),
+  attachmentsUri: z.string().url("Must be a valid URL").optional().or(z.literal(""))
+});
 
 const categoryColors: Record<ReportDTO["category"], string> = {
   INFRASTRUCTURE: "indigo",
@@ -46,8 +55,20 @@ export default function ReportsPage() {
   const reports = useReportStore((state) => state.reports);
   const loading = useReportStore((state) => state.loading);
   const fetchReports = useReportStore((state) => state.fetchReports);
+  const createReport = useReportStore((state) => state.createReport);
   const [selectedReport, setSelectedReport] = useState<ReportDTO | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
+  const [manualEntryOpened, manualEntryHandlers] = useDisclosure(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const manualForm = useForm({
+    initialValues: {
+      phoneNumber: "",
+      message: "",
+      attachmentsUri: ""
+    },
+    validate: zodResolver(manualReportSchema)
+  });
 
   useEffect(() => {
     void fetchReports();
@@ -63,14 +84,50 @@ export default function ReportsPage() {
     setSelectedReport(null);
   };
 
+  const handleManualSubmit = useCallback(
+    async (values: typeof manualForm.values) => {
+      setSubmitting(true);
+      try {
+        await createReport({
+          phoneNumber: values.phoneNumber,
+          message: values.message,
+          attachmentsUri: values.attachmentsUri || undefined
+        });
+        notifications.show({
+          title: "Report saved",
+          message: "Manual report has been logged successfully.",
+          color: "teal"
+        });
+        manualForm.reset();
+        manualEntryHandlers.close();
+        void fetchReports();
+      } catch (error) {
+        console.error(error);
+        notifications.show({
+          title: "Failed to save",
+          message: "Please try again",
+          color: "red"
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [createReport, manualForm, manualEntryHandlers, fetchReports]
+  );
+
   return (
     <Stack gap="lg">
-      <div>
-        <Title order={2}>Citizen Reports</Title>
-        <Text c="dimmed" size="sm">
-          View and manage reports submitted by citizens via SMS
-        </Text>
-      </div>
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Title order={2}>Citizen Reports</Title>
+          <Text c="dimmed" size="sm">
+            View and manage reports submitted by citizens via SMS
+          </Text>
+        </div>
+        <Button leftSection={<IconPlus size={16} />} onClick={manualEntryHandlers.open}>
+          Manual Report Entry
+        </Button>
+      </Group>
 
       <Card withBorder shadow="sm">
         <ScrollArea>
@@ -148,6 +205,47 @@ export default function ReportsPage() {
       </Card>
 
       <ReportDetailModal report={selectedReport} opened={opened} onClose={handleClose} />
+
+      <Modal
+        opened={manualEntryOpened}
+        onClose={manualEntryHandlers.close}
+        title="Manual Report Entry"
+        size="lg"
+      >
+        <Text size="sm" c="dimmed" mb="md">
+          Create a report directly without receiving an SMS. Useful for walk-in reports or phone calls.
+        </Text>
+        <form onSubmit={manualForm.onSubmit(handleManualSubmit)}>
+          <Stack>
+            <TextInput
+              label="Phone number"
+              placeholder="09171234567"
+              withAsterisk
+              {...manualForm.getInputProps("phoneNumber")}
+            />
+            <Textarea
+              label="Message"
+              placeholder="Broken streetlight near Barangay Hall"
+              minRows={4}
+              withAsterisk
+              {...manualForm.getInputProps("message")}
+            />
+            <TextInput
+              label="Attachment link (optional)"
+              placeholder="https://drive.google.com/..."
+              {...manualForm.getInputProps("attachmentsUri")}
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="subtle" onClick={manualEntryHandlers.close} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={submitting} disabled={submitting}>
+                Save Report
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
     </Stack>
   );
 }

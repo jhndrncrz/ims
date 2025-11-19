@@ -146,6 +146,15 @@ export default function SettingsPage() {
         </Text>
       </div>
 
+      <Alert icon={<IconInfoCircle size={16} />} color="yellow" variant="light">
+        <Text size="sm" fw={500}>Configuration UI Preview Only</Text>
+        <Text size="xs" mt={4}>
+          This interface shows available settings but does not persist changes. 
+          Configure environment variables in <Code>.env</Code> file and restart the server.
+          Connection tests and save buttons are for demonstration purposes only.
+        </Text>
+      </Alert>
+
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="sms" leftSection={<IconCloud size={16} />}>

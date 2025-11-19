@@ -25,6 +25,17 @@ type Conversation = {
   messages: Message[];
 };
 
+// Helper to extract channel and display identifier from phoneNumber
+function parseIdentifier(phoneNumber: string): { channel: string; display: string; color: string } {
+  if (phoneNumber.startsWith("messenger:")) {
+    return { channel: "Messenger", display: phoneNumber.replace("messenger:", "ID: "), color: "violet" };
+  }
+  if (phoneNumber.startsWith("email:")) {
+    return { channel: "Email", display: phoneNumber.replace("email:", ""), color: "cyan" };
+  }
+  return { channel: "SMS", display: phoneNumber, color: "blue" };
+}
+
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,15 +100,20 @@ export default function ConversationsPage() {
                   >
                     <Group justify="space-between" wrap="nowrap">
                       <div style={{ flex: 1, minWidth: 0 }}>
+                        <Group gap="xs" mb={4}>
+                          <Badge size="xs" color={parseIdentifier(conv.phoneNumber).color}>
+                            {parseIdentifier(conv.phoneNumber).channel}
+                          </Badge>
+                        </Group>
                         <Text fw={600} size="sm">
-                          {conv.phoneNumber}
+                          {parseIdentifier(conv.phoneNumber).display}
                         </Text>
                         <Text size="xs" c="dimmed" lineClamp={1}>
                           {conv.lastMessage.body}
                         </Text>
                       </div>
                       <div>
-                        <Badge size="sm" color="blue">
+                        <Badge size="sm" color="gray">
                           {conv.messageCount}
                         </Badge>
                         <IconChevronRight size={16} />
@@ -115,7 +131,12 @@ export default function ConversationsPage() {
               <Card.Section inheritPadding py="sm" withBorder>
                 <Group justify="space-between">
                   <div>
-                    <Text fw={600}>{selectedConv.phoneNumber}</Text>
+                    <Group gap="xs" mb={4}>
+                      <Badge size="sm" color={parseIdentifier(selectedConv.phoneNumber).color}>
+                        {parseIdentifier(selectedConv.phoneNumber).channel}
+                      </Badge>
+                    </Group>
+                    <Text fw={600}>{parseIdentifier(selectedConv.phoneNumber).display}</Text>
                     <Text size="xs" c="dimmed">
                       {selectedConv.messageCount} messages
                     </Text>

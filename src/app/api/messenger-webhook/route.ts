@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
           const result = await smsProcessor.handleIncoming({
             phoneNumber: `messenger:${senderId}`,
             message: messageText,
-            skipSmsReply: false // We'll send via Messenger instead
+            skipSmsReply: false, // We'll send via Messenger instead
+            channel: "MESSENGER"
           });
 
           // Send response back via Messenger
