@@ -61,7 +61,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text size="lg" fw={700} c="red">
+            <Text 
+              size="lg" 
+              fw={700} 
+              c="red"
+              style={{ cursor: "pointer" }}
+              onClick={() => router.push("/")}
+            >
               Barangay AI SMS Hub
             </Text>
           </Group>
