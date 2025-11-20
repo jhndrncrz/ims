@@ -1,4 +1,4 @@
-# SMS Setup Guide for Barangay AI SMS Hub
+# SMS Setup Guide for BarangaAI
 
 ## Overview
 This guide explains how to configure Alibaba Cloud SMS service to enable real SMS reception and responses for your Barangay AI system.

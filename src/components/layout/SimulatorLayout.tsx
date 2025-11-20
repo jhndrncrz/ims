@@ -15,7 +15,8 @@ type SimulatorLayoutProps = {
 };
 
 const navigation = [
-  { label: "Simulator", icon: IconMessage, href: "/simulator" },
+  { label: "Simulator", icon: IconMessage, href: "/simulator/simulate" },
+  { label: "Send SMS", icon: IconMessage, href: "/simulator/sms" },
 ];
 
 export function SimulatorLayout({ children }: SimulatorLayoutProps) {
@@ -60,7 +61,7 @@ export function SimulatorLayout({ children }: SimulatorLayoutProps) {
               style={{ cursor: "pointer" }}
               onClick={() => router.push("/")}
             >
-              Barangay AI SMS Hub
+              BarangaAI
             </Text>
           </Group>
           <Group>

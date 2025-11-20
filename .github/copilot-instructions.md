@@ -1,4 +1,4 @@
-# Barangay AI SMS Hub - AI Agent Instructions
+# BarangaAI - AI Agent Instructions
 
 ## Project Overview
 Multi-channel Filipino barangay assistant that routes citizen messages through either:

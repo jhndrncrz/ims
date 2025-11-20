@@ -47,7 +47,7 @@ export const theme: MantineThemeOverride = createTheme({
 });
 
 export const metadata: Metadata = {
-  title: "Barangay AI SMS Hub",
+  title: "BarangaAI",
   description: "Hackathon-ready MVP combining Alibaba Cloud AI + SMS",
 };
 

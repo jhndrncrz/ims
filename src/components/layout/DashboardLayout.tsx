@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               style={{ cursor: "pointer" }}
               onClick={() => router.push("/")}
             >
-              Barangay AI SMS Hub
+              BarangaAI
             </Text>
           </Group>
           <Group>

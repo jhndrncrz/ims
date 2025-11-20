@@ -12,7 +12,7 @@ export default function Home() {
       <Stack gap="xl" align="center">
         <div style={{ textAlign: "center" }}>
           <Title order={1} size={48} mb="md">
-            Barangay AI SMS Hub
+            BarangaAI
           </Title>
           <Text size="xl" c="dimmed" maw={600}>
             Unified SMS hotline powered by Alibaba Cloud AI, Retrieval Augmented Generation, and automated citizen reporting.

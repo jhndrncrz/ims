@@ -18,7 +18,7 @@ type Message = {
 
 const BARANGAY_NUMBER = "+63 917 123 4567";
 
-export default function SmsSimulatorPage() {
+export default function MockSimulatorPage() {
   const [phoneNumber, setPhoneNumber] = useState("09171234567");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -113,9 +113,9 @@ export default function SmsSimulatorPage() {
       {/* Info Panel */}
       <Stack gap="md" style={{ minWidth: 280 }}>
         <div>
-          <Title order={2}>SMS Simulator</Title>
+          <Title order={2}>Mock SMS Simulator</Title>
           <Text c="dimmed" size="sm">
-            Test the Barangay AI SMS Hub
+            Test the BarangaAI locally (no real SMS sent)
           </Text>
         </div>
 
