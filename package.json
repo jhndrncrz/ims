@@ -35,7 +35,7 @@
     "mailparser": "^3.9.0",
     "mammoth": "^1.11.0",
     "mantine-datatable": "^8.3.8",
-    "next": "16.0.3",
+    "next": "16.0.10",
     "openai": "^6.9.1",
     "pdf-parse": "^2.4.5",
     "pdf2json": "^4.0.0",
