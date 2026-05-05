@@ -1,4 +1,4 @@
-## BarangaAI (Hackathon MVP)
+# BarangaAI (Hackathon MVP)
 
 Unified SMS hotline for Filipino barangays that blends Alibaba Cloud SMS + LLM services with a lightweight RAG pipeline, Prisma data layer, and Mantine-powered dashboard.
 
